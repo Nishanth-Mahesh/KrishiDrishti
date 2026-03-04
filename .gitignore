@@ -1,0 +1,9 @@
+backend/venv/ 
+backend/__pycache__/ 
+backend/krishidrishti_model.keras 
+backend/dataset/ 
+backend/PlantVillage/ 
+frontend/node_modules/ 
+frontend/dist/ 
+*.pyc 
+.env
