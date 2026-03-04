@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Upload, Leaf, AlertTriangle, CheckCircle, RotateCcw, ChevronDown } from "lucide-react";
 import "./App.css";
 
-const BACKEND = "http://127.0.0.1:8000";
+const BACKEND = "https://krishidrishti-6ich.onrender.com";
 const RC = { none:"#30d158", low:"#ffd60a", moderate:"#ff9f0a", high:"#ff453a" };
 const RG = { none:"#30d15820", low:"#ffd60a20", moderate:"#ff9f0a20", high:"#ff453a20" };
 
