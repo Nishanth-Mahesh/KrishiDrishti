@@ -14,91 +14,84 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load model once at startup
 model = tf.keras.models.load_model("krishidrishti_model.keras")
 
 CLASS_NAMES = [
-    "Bacterial Spot",
-    "Early Blight", 
-    "Late Blight",
-    "Leaf Mold",
-    "Septoria Leaf Spot",
-    "Spider Mites",
-    "Target Spot",
-    "Tomato Yellow Leaf Curl Virus",
-    "Tomato Mosaic Virus",
-    "Healthy"
+    "Bacterial Spot", "Early Blight", "Late Blight", "Leaf Mold",
+    "Septoria Leaf Spot", "Spider Mites", "Target Spot",
+    "Tomato Yellow Leaf Curl Virus", "Tomato Mosaic Virus", "Healthy"
 ]
 
 def is_leaf_image(img: Image.Image) -> bool:
-    """Check if image contains a leaf based on green color analysis"""
-    img_rgb = img.convert("RGB").resize((100, 100))
+    img_rgb = img.convert("RGB").resize((150, 150))
     pixels = np.array(img_rgb)
-    
-    r, g, b = pixels[:,:,0], pixels[:,:,1], pixels[:,:,2]
-    
-    # Green dominant pixels (leaf-like)
-    green_mask = (g > r) & (g > b) & (g > 40)
-    green_ratio = np.sum(green_mask) / (100 * 100)
-    
-    # Yellow/brown pixels (diseased leaf)
-    yellow_mask = (r > 100) & (g > 80) & (b < 100) & (np.abs(r.astype(int) - g.astype(int)) < 80)
-    yellow_ratio = np.sum(yellow_mask) / (100 * 100)
-    
-    # Accept if enough green or yellow-brown (diseased) pixels
-    leaf_ratio = green_ratio + (yellow_ratio * 0.5)
-    return leaf_ratio > 0.10  # at least 10% leaf-like pixels
+    r = pixels[:,:,0].astype(float)
+    g = pixels[:,:,1].astype(float)
+    b = pixels[:,:,2].astype(float)
+
+    # Must have enough green pixels (real leaf color)
+    green_mask = (g > r + 10) & (g > b + 10) & (g > 50)
+    green_ratio = np.sum(green_mask) / (150 * 150)
+
+    # Diseased leaf: yellowish-brown tones
+    yellow_mask = (r > 120) & (g > 100) & (b < 80) & (g > b + 20)
+    yellow_ratio = np.sum(yellow_mask) / (150 * 150)
+
+    # Brown/dark-green diseased areas
+    brown_mask = (r > 80) & (g > 60) & (b < 60) & (r > b + 20)
+    brown_ratio = np.sum(brown_mask) / (150 * 150)
+
+    # Reject if image is mostly dark (screenshots, black backgrounds)
+    brightness = (r + g + b) / 3
+    dark_ratio = np.sum(brightness < 40) / (150 * 150)
+    if dark_ratio > 0.5:
+        return False
+
+    # Reject if image is mostly artificial colors (blue, purple, white UI)
+    blue_dominant = (b > r + 20) & (b > g + 10)
+    blue_ratio = np.sum(blue_dominant) / (150 * 150)
+    if blue_ratio > 0.25:
+        return False
+
+    # Reject grayscale-like images (screenshots, documents)
+    color_variance = np.mean(np.std(pixels, axis=2))
+    if color_variance < 15:
+        return False
+
+    leaf_score = green_ratio + (yellow_ratio * 0.6) + (brown_ratio * 0.4)
+    return leaf_score > 0.15
 
 @app.get("/")
 def health():
-    return {
-        "status": "ok",
-        "message": "KrishiDrishti AI — 10 Class Tomato Disease Detector 🌿",
-        "classes": 10
-    }
+    return {"status": "ok", "message": "KrishiDrishti AI — 10 Class Tomato Disease Detector 🌿", "classes": 10}
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    # Validate file type
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Please upload an image file.")
-    
+
     contents = await file.read()
-    
     try:
         img = Image.open(io.BytesIO(contents)).convert("RGB")
     except Exception:
-        raise HTTPException(status_code=400, detail="Could not read image. Please try again.")
-    
-    # ✅ CHECK 1: Is it a leaf?
+        raise HTTPException(status_code=400, detail="Could not read image.")
+
+    # Check 1: Is it a leaf?
     if not is_leaf_image(img):
-        raise HTTPException(
-            status_code=422,
-            detail="NOT_A_LEAF: Please upload a clear photo of a tomato leaf."
-        )
-    
-    # Preprocess for model
-    img_resized = img.resize((224, 224))
-    img_array = np.array(img_resized) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-    
-    # Run prediction
+        raise HTTPException(status_code=422, detail="NOT_A_LEAF: Please upload a real tomato leaf photo.")
+
+    # Preprocess
+    img_array = np.expand_dims(np.array(img.resize((224, 224))) / 255.0, axis=0)
     predictions = model.predict(img_array)[0]
-    max_confidence = float(np.max(predictions))
-    predicted_index = int(np.argmax(predictions))
-    
-    # ✅ CHECK 2: Is confidence high enough?
-    if max_confidence < 0.65:
-        raise HTTPException(
-            status_code=422,
-            detail="LOW_CONFIDENCE: Image not clear enough. Please upload a close-up photo of a tomato leaf."
-        )
-    
+    max_conf = float(np.max(predictions))
+    pred_idx = int(np.argmax(predictions))
+
+    # Check 2: Is confidence high enough?
+    if max_conf < 0.75:
+        raise HTTPException(status_code=422, detail="LOW_CONFIDENCE: Image not clear enough. Use a close-up leaf photo.")
+
     return {
-        "class": CLASS_NAMES[predicted_index],
-        "confidence": round(max_confidence * 100, 2),
-        "all_predictions": {
-            CLASS_NAMES[i]: round(float(predictions[i]) * 100, 2)
-            for i in range(len(CLASS_NAMES))
-        }
+        "class": CLASS_NAMES[pred_idx],
+        "confidence": round(max_conf * 100, 2),
+        "all_predictions": {CLASS_NAMES[i]: round(float(predictions[i]) * 100, 2) for i in range(len(CLASS_NAMES))}
     }
