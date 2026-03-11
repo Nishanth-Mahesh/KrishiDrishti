@@ -29,37 +29,31 @@ def is_leaf_image(img: Image.Image) -> bool:
     g = pixels[:,:,1].astype(float)
     b = pixels[:,:,2].astype(float)
 
-    # Must have enough green pixels (real leaf color)
-    green_mask = (g > r + 10) & (g > b + 10) & (g > 50)
+    # Green pixels (healthy leaf)
+    green_mask = (g > r) & (g > b) & (g > 30)
     green_ratio = np.sum(green_mask) / (150 * 150)
 
-    # Diseased leaf: yellowish-brown tones
-    yellow_mask = (r > 120) & (g > 100) & (b < 80) & (g > b + 20)
+    # Yellowish (diseased leaf)
+    yellow_mask = (r > 100) & (g > 80) & (b < 100)
     yellow_ratio = np.sum(yellow_mask) / (150 * 150)
 
-    # Brown/dark-green diseased areas
-    brown_mask = (r > 80) & (g > 60) & (b < 60) & (r > b + 20)
+    # Brown (diseased/dry leaf)
+    brown_mask = (r > 60) & (g > 40) & (b < 60) & (r > g)
     brown_ratio = np.sum(brown_mask) / (150 * 150)
 
-    # Reject if image is mostly dark (screenshots, black backgrounds)
-    brightness = (r + g + b) / 3
-    dark_ratio = np.sum(brightness < 40) / (150 * 150)
-    if dark_ratio > 0.5:
-        return False
-
-    # Reject if image is mostly artificial colors (blue, purple, white UI)
-    blue_dominant = (b > r + 20) & (b > g + 10)
+    # Block screenshots: mostly blue UI
+    blue_dominant = (b > r + 30) & (b > g + 20)
     blue_ratio = np.sum(blue_dominant) / (150 * 150)
-    if blue_ratio > 0.25:
+    if blue_ratio > 0.35:
         return False
 
-    # Reject grayscale-like images (screenshots, documents)
+    # Block pure white/gray images (documents, screenshots)
     color_variance = np.mean(np.std(pixels, axis=2))
-    if color_variance < 15:
+    if color_variance < 10:
         return False
 
-    leaf_score = green_ratio + (yellow_ratio * 0.6) + (brown_ratio * 0.4)
-    return leaf_score > 0.15
+    leaf_score = green_ratio + (yellow_ratio * 0.5) + (brown_ratio * 0.4)
+    return leaf_score > 0.08
 
 @app.get("/")
 def health():
@@ -87,7 +81,7 @@ async def predict(file: UploadFile = File(...)):
     pred_idx = int(np.argmax(predictions))
 
     # Check 2: Is confidence high enough?
-    if max_conf < 0.75:
+    if max_conf < 0.70:
         raise HTTPException(status_code=422, detail="LOW_CONFIDENCE: Image not clear enough. Use a close-up leaf photo.")
 
     return {
