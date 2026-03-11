@@ -32,10 +32,25 @@ export default function App() {
   };
 
   const analyze = async () => {
-    setLoading(true); setError(null);
+    setLoading(true); setError(null); setResult(null);
     const fd = new FormData(); fd.append("file", file);
-    try { setResult((await axios.post(`${BACKEND}/predict`, fd)).data); }
-    catch { setError("Backend offline. Start it with: python -m uvicorn main:app --reload"); }
+    try {
+      const res = await axios.post(`${BACKEND}/predict`, fd);
+      setResult(res.data);
+      setError(null);
+    } catch (err) {
+      const detail = err?.response?.data?.detail || "";
+      if (detail.includes("NOT_A_LEAF")) {
+        setError("🍃 Not a tomato leaf! Please upload a clear photo of a tomato plant leaf only.");
+      } else if (detail.includes("LOW_CONFIDENCE")) {
+        setError("📸 Image not clear enough. Try a close-up photo of the leaf in good lighting.");
+      } else if (err?.response?.status === 422) {
+        setError("🍃 Please upload a clear tomato leaf photo. Random or unclear images are not supported.");
+      } else {
+        setError("⚠️ Backend offline or error. Please try again in a moment.");
+      }
+      setResult(null);
+    }
     setLoading(false);
   };
 
@@ -144,7 +159,7 @@ export default function App() {
                     <div className="preview-name">{file.name}</div>
                     <div className="preview-size">{(file.size/1024).toFixed(1)} KB · Ready to analyze</div>
 
-                    {!loading && !error && (
+                    {!loading && (
                       <button className="analyze-btn" onClick={analyze}>
                         🔬 Detect Disease
                       </button>
@@ -165,7 +180,13 @@ export default function App() {
                         </div>
                       </div>
                     )}
-                    {error && <div className="err-box"><AlertTriangle size={14}/><span>{error}</span></div>}
+
+                    {error && (
+                      <div className="err-box">
+                        <AlertTriangle size={14}/>
+                        <span>{error}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
