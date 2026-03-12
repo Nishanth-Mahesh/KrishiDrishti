@@ -16,21 +16,6 @@ app.add_middleware(
 
 model = tf.keras.models.load_model("krishidrishti_model.keras")
 
-# MobileNetV2 pretrained on ImageNet — used to verify it's a plant/leaf
-base_model = tf.keras.applications.MobileNetV2(
-    input_shape=(224, 224, 3),
-    include_top=True,
-    weights="imagenet"
-)
-
-# ImageNet indices that relate to plants, leaves, vegetables, nature
-PLANT_CLASSES = set([
-    *range(937, 985),   # fruits and vegetables
-    *range(985, 1000),  # flowers and plants
-    301, 303, 304,      # outdoor/nature scenes
-    890, 891, 892,      # pepper, strawberry, artichoke
-])
-
 CLASS_NAMES = [
     "Bacterial Spot", "Early Blight", "Late Blight", "Leaf Mold",
     "Septoria Leaf Spot", "Spider Mites", "Target Spot",
@@ -39,138 +24,128 @@ CLASS_NAMES = [
 
 DISEASE_INFO = {
     "Bacterial Spot": {
-        "emoji": "🦠", "risk": "high",
-        "causes": "Caused by Xanthomonas bacteria. Spreads through rain, wind, and infected seeds.",
-        "symptoms": "Small, dark brown spots with yellow halos on leaves, stems, and fruits.",
+        "emoji": "🦠",
+        "risk": "high",
+        "causes": "Caused by Xanthomonas bacteria. Spreads through infected seeds, rain splash, and contaminated tools.",
+        "symptoms": "Small, brown water-soaked spots with yellow halos on leaves. Spots may merge and cause leaf drop.",
         "prevention": "Use certified disease-free seeds. Avoid overhead irrigation. Rotate crops every season.",
-        "pesticide": "Copper Oxychloride 50% WP (Blitox) — 3g per litre of water",
-        "price": "₹320–₹450 per kg"
+        "pesticide": "Copper Oxychloride 50% WP (Blitox) — 3g per litre of water. Spray every 7 days.",
+        "price": "₹320 per kg (Blitox 50 WP)"
     },
     "Early Blight": {
-        "emoji": "🟤", "risk": "moderate",
-        "causes": "Alternaria solani fungus. Favoured by warm, humid conditions and poor nutrition.",
-        "symptoms": "Concentric ring 'target' spots on older/lower leaves. Yellowing around spots.",
-        "prevention": "Remove infected leaves. Apply mulch. Ensure adequate potassium in soil.",
-        "pesticide": "Mancozeb 75% WP (Indofil M-45) — 2.5g per litre of water",
-        "price": "₹180–₹260 per kg"
+        "emoji": "🟤",
+        "risk": "moderate",
+        "causes": "Caused by Alternaria solani fungus. Thrives in warm, humid conditions with heavy dew.",
+        "symptoms": "Dark brown concentric ring spots (target-board pattern) on older/lower leaves first.",
+        "prevention": "Remove infected leaves immediately. Improve air circulation. Avoid wetting foliage.",
+        "pesticide": "Mancozeb 75% WP (Dithane M-45) — 2.5g per litre. Spray every 10 days.",
+        "price": "₹280 per kg (Dithane M-45)"
     },
     "Late Blight": {
-        "emoji": "🖤", "risk": "high",
-        "causes": "Phytophthora infestans oomycete. Spreads rapidly in cool, wet weather.",
-        "symptoms": "Large dark-green to brown-black patches. White mould on leaf undersides.",
-        "prevention": "Avoid evening watering. Destroy infected plants immediately. Use resistant varieties.",
-        "pesticide": "Cymoxanil + Mancozeb (Curzate M8) — 3g per litre of water",
-        "price": "₹550–₹700 per kg"
+        "emoji": "🖤",
+        "risk": "high",
+        "causes": "Caused by Phytophthora infestans. Spreads rapidly in cool, wet weather. Can destroy crop in days.",
+        "symptoms": "Large dark brown/black water-soaked patches on leaves. White mold visible on underside.",
+        "prevention": "Avoid overhead watering. Destroy infected plants immediately. Plant resistant varieties.",
+        "pesticide": "Cymoxanil + Mancozeb (Curzate M8) — 2.5g per litre. Spray every 5-7 days.",
+        "price": "₹650 per kg (Curzate M8)"
     },
     "Leaf Mold": {
-        "emoji": "🟡", "risk": "low",
-        "causes": "Passalora fulva fungus. Thrives in high humidity (>85%) and poor ventilation.",
-        "symptoms": "Pale green/yellow patches on upper leaf surface. Olive-brown fuzzy mould below.",
-        "prevention": "Improve greenhouse ventilation. Reduce humidity. Space plants adequately.",
-        "pesticide": "Chlorothalonil 75% WP (Kavach) — 2g per litre of water",
-        "price": "₹400–₹520 per kg"
+        "emoji": "🟡",
+        "risk": "low",
+        "causes": "Caused by Passalora fulva fungus. Develops in high humidity (above 85%) and poor ventilation.",
+        "symptoms": "Pale yellow spots on upper leaf surface. Olive-green to brown fuzzy mold on underside.",
+        "prevention": "Improve greenhouse ventilation. Reduce humidity. Avoid overhead irrigation.",
+        "pesticide": "Chlorothalonil 75% WP (Kavach) — 2g per litre of water. Spray every 10 days.",
+        "price": "₹400 per kg (Kavach 75 WP)"
     },
     "Septoria Leaf Spot": {
-        "emoji": "⚪", "risk": "moderate",
-        "causes": "Septoria lycopersici fungus. Spreads via water splash from soil to leaves.",
-        "symptoms": "Numerous small circular spots with white/grey centres and dark borders.",
-        "prevention": "Mulch soil to prevent splash. Remove lower leaves. Avoid wetting foliage.",
-        "pesticide": "Iprodione 50% WP (Rovral) — 2g per litre of water",
-        "price": "₹600–₹800 per kg"
+        "emoji": "⚪",
+        "risk": "moderate",
+        "causes": "Caused by Septoria lycopersici fungus. Spreads by rain splash and infected crop debris.",
+        "symptoms": "Small circular spots with white/gray centers and dark brown borders. Black dots inside spots.",
+        "prevention": "Mulch around plants. Remove lower infected leaves. Practice crop rotation.",
+        "pesticide": "Mancozeb + Carbendazim (Saaf) — 2g per litre of water. Spray every 7-10 days.",
+        "price": "₹350 per 500g (Saaf Fungicide)"
     },
     "Spider Mites": {
-        "emoji": "🕷️", "risk": "moderate",
-        "causes": "Tetranychus urticae mite. Worsens in hot, dry, dusty conditions.",
-        "symptoms": "Tiny yellow/bronze stippling on leaves. Fine webbing on undersides.",
+        "emoji": "🕷️",
+        "risk": "moderate",
+        "causes": "Caused by Tetranychus urticae mites. Thrives in hot, dry, dusty conditions.",
+        "symptoms": "Fine bronze/yellow stippling on leaves. Webbing visible on underside. Leaves turn brown and dry.",
         "prevention": "Maintain adequate soil moisture. Avoid dusty conditions. Introduce predatory mites.",
-        "pesticide": "Abamectin 1.8% EC (Vertimec) — 1ml per litre of water",
-        "price": "₹900–₹1200 per litre"
+        "pesticide": "Abamectin 1.9% EC (Vertimec) — 0.5ml per litre of water. Spray underside of leaves.",
+        "price": "₹900 per 100ml (Vertimec)"
     },
     "Target Spot": {
-        "emoji": "🎯", "risk": "moderate",
-        "causes": "Corynespora cassiicola fungus. Spreads in warm humid conditions.",
-        "symptoms": "Circular spots with concentric rings on leaves, stems and fruits.",
-        "prevention": "Crop rotation. Remove plant debris. Improve air circulation.",
-        "pesticide": "Azoxystrobin 23% SC (Amistar) — 1ml per litre of water",
-        "price": "₹1800–₹2200 per litre"
+        "emoji": "🎯",
+        "risk": "moderate",
+        "causes": "Caused by Corynespora cassiicola fungus. Favored by warm temperatures and high humidity.",
+        "symptoms": "Brown circular spots with concentric rings (target pattern) on leaves, stems, and fruits.",
+        "prevention": "Improve air circulation. Avoid wet foliage. Remove and destroy infected plant debris.",
+        "pesticide": "Azoxystrobin 23% SC (Amistar) — 1ml per litre of water. Spray every 10-14 days.",
+        "price": "₹1800 per 250ml (Amistar)"
     },
     "Tomato Yellow Leaf Curl Virus": {
-        "emoji": "🌀", "risk": "high",
-        "causes": "TYLCV virus spread by whitefly (Bemisia tabaci). No cure once infected.",
-        "symptoms": "Severe leaf curling and yellowing. Stunted growth. Reduced fruit set.",
-        "prevention": "Control whiteflies with yellow sticky traps. Use virus-resistant varieties.",
-        "pesticide": "Imidacloprid 17.8% SL (Confidor) — 0.5ml per litre for whitefly control",
-        "price": "₹700–₹900 per litre"
+        "emoji": "🌀",
+        "risk": "high",
+        "causes": "Viral disease spread by whitefly (Bemisia tabaci). No cure once infected.",
+        "symptoms": "Leaves curl upward, turn yellow at edges. Stunted plant growth. Flowers may drop.",
+        "prevention": "Control whiteflies with yellow sticky traps. Use reflective mulch. Remove infected plants.",
+        "pesticide": "Imidacloprid 17.8% SL (Confidor) — 0.5ml per litre. Spray for whitefly control only.",
+        "price": "₹650 per 100ml (Confidor)"
     },
     "Tomato Mosaic Virus": {
-        "emoji": "🧩", "risk": "high",
-        "causes": "ToMV virus spread by contact, tools, and infected transplants.",
-        "symptoms": "Mottled green-yellow mosaic pattern. Distorted, fern-like leaves.",
-        "prevention": "Disinfect tools with bleach. Wash hands before handling. Remove infected plants.",
-        "pesticide": "No direct cure. Spray Potassium Silicate — 2g per litre to boost immunity",
-        "price": "₹300–₹450 per kg"
+        "emoji": "🧩",
+        "risk": "high",
+        "causes": "Caused by Tomato Mosaic Virus (ToMV). Spreads through contact, infected tools, and seeds.",
+        "symptoms": "Mottled light/dark green mosaic pattern on leaves. Leaves may curl and become distorted.",
+        "prevention": "Wash hands before handling plants. Sterilize tools. Remove and burn infected plants.",
+        "pesticide": "No direct cure. Spray Neem Oil 1500 ppm — 3ml per litre to reduce insect vectors.",
+        "price": "₹250 per litre (Neem Oil)"
     },
     "Healthy": {
-        "emoji": "🟢", "risk": "none",
-        "causes": "No disease detected. Your plant is healthy!",
-        "symptoms": "Deep green, firm leaves with no spots, curling, or discoloration.",
-        "prevention": "Continue regular watering, balanced NPK fertilizer, and weekly inspection.",
-        "pesticide": "Preventive spray: Neem oil 5ml + 1ml soap per litre of water",
-        "price": "₹150–₹200 per litre (Neem oil)"
+        "emoji": "🟢",
+        "risk": "none",
+        "causes": "No disease detected. Your plant appears healthy.",
+        "symptoms": "Deep green leaves with no spots, discoloration, or abnormalities.",
+        "prevention": "Continue regular watering, fertilization, and field monitoring every week.",
+        "pesticide": "No treatment needed. Preventive spray: Neem Oil 3ml per litre every 15 days.",
+        "price": "₹250 per litre (Neem Oil — preventive)"
     }
 }
 
-def preprocess(img: Image.Image, size=(224, 224)):
-    img = img.convert("RGB").resize(size)
-    arr = np.array(img) / 255.0
-    return np.expand_dims(arr, axis=0)
+def is_leaf_image(img: Image.Image) -> bool:
+    img_rgb = img.convert("RGB").resize((150, 150))
+    pixels = np.array(img_rgb)
+    r = pixels[:,:,0].astype(float)
+    g = pixels[:,:,1].astype(float)
+    b = pixels[:,:,2].astype(float)
 
-def is_plant_leaf(img: Image.Image) -> bool:
-    # --- Step 1: Color analysis ---
-    small = img.convert("RGB").resize((100, 100))
-    px = np.array(small).astype(float)
-    r, g, b = px[:,:,0], px[:,:,1], px[:,:,2]
+    green_mask = (g > r) & (g > b) & (g > 30)
+    green_ratio = np.sum(green_mask) / (150 * 150)
 
-    green_px  = np.sum((g > r) & (g > b) & (g > 25)) / 10000
-    yellow_px = np.sum((r > 100) & (g > 80) & (b < 100)) / 10000
-    brown_px  = np.sum((r > 60) & (g > 35) & (b < 55) & (r > g)) / 10000
-    color_score = green_px + yellow_px * 0.5 + brown_px * 0.4
+    yellow_mask = (r > 100) & (g > 80) & (b < 100)
+    yellow_ratio = np.sum(yellow_mask) / (150 * 150)
 
-    # Hard block: too much blue = UI/screenshot
-    blue_px = np.sum((b > r + 25) & (b > g + 15)) / 10000
-    if blue_px > 0.40:
+    brown_mask = (r > 60) & (g > 40) & (b < 60) & (r > g)
+    brown_ratio = np.sum(brown_mask) / (150 * 150)
+
+    blue_dominant = (b > r + 30) & (b > g + 20)
+    blue_ratio = np.sum(blue_dominant) / (150 * 150)
+    if blue_ratio > 0.35:
         return False
 
-    # Hard block: too gray = document/screenshot
-    gray_var = np.mean(np.std(px, axis=2))
-    if gray_var < 8:
+    color_variance = np.mean(np.std(pixels, axis=2))
+    if color_variance < 10:
         return False
 
-    # Strong color match — accept immediately
-    if color_score > 0.12:
-        return True
-
-    # --- Step 2: MobileNetV2 ImageNet check for borderline images ---
-    arr = tf.keras.applications.mobilenet_v2.preprocess_input(
-        np.array(img.convert("RGB").resize((224, 224))).astype(float)
-    )
-    preds = base_model.predict(np.expand_dims(arr, axis=0), verbose=0)[0]
-    top10_idx = np.argsort(preds)[-10:]
-    plant_conf = sum(float(preds[i]) for i in top10_idx if i in PLANT_CLASSES)
-
-    if plant_conf > 0.05:
-        return True
-
-    # Weak color signal — still give benefit of doubt
-    return color_score > 0.05
+    leaf_score = green_ratio + (yellow_ratio * 0.5) + (brown_ratio * 0.4)
+    return leaf_score > 0.08
 
 @app.get("/")
 def health():
-    return {
-        "status": "ok",
-        "message": "KrishiDrishti AI — 10 Class Tomato Disease Detector 🌿",
-        "classes": 10
-    }
+    return {"status": "ok", "message": "KrishiDrishti AI — 10 Class Tomato Disease Detector 🌿", "classes": 10}
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
@@ -181,29 +156,20 @@ async def predict(file: UploadFile = File(...)):
     try:
         img = Image.open(io.BytesIO(contents)).convert("RGB")
     except Exception:
-        raise HTTPException(status_code=400, detail="Could not read image. Please try again.")
+        raise HTTPException(status_code=400, detail="Could not read image.")
 
-    # Check 1: Is it a plant leaf?
-    if not is_plant_leaf(img):
-        raise HTTPException(
-            status_code=422,
-            detail="NOT_A_LEAF: Please upload a real tomato leaf photo. Random images are not supported."
-        )
+    if not is_leaf_image(img):
+        raise HTTPException(status_code=422, detail="NOT_A_LEAF: Please upload a real tomato leaf photo.")
 
-    # Check 2: Run disease prediction
-    img_array = preprocess(img)
-    predictions = model.predict(img_array, verbose=0)[0]
+    img_array = np.expand_dims(np.array(img.resize((224, 224))) / 255.0, axis=0)
+    predictions = model.predict(img_array)[0]
     max_conf = float(np.max(predictions))
     pred_idx = int(np.argmax(predictions))
+
+    if max_conf < 0.70:
+        raise HTTPException(status_code=422, detail="LOW_CONFIDENCE: Image not clear enough. Use a close-up leaf photo.")
+
     disease_name = CLASS_NAMES[pred_idx]
-
-    # Check 3: Confidence threshold
-    if max_conf < 0.60:
-        raise HTTPException(
-            status_code=422,
-            detail="LOW_CONFIDENCE: Image not clear enough. Please use a close-up photo of the leaf in good lighting."
-        )
-
     info = DISEASE_INFO[disease_name]
 
     return {
