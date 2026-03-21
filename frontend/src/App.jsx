@@ -1,693 +1,429 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
+import { Upload, Leaf, AlertTriangle, CheckCircle, RotateCcw, Sprout, Shield, FlaskConical, Eye } from "lucide-react";
+import "./App.css";
 
-// ─── Inline styles as JS objects ──────────────────────────────────────────────
-const S = {
-  // Root
-  root: {
-    minHeight: "100vh",
-    background: "#080808",
-    color: "#f0f0f0",
-    fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
-    overflowX: "hidden",
-  },
+const BACKEND = "https://krishidrishti-6ich.onrender.com";
+const RISK_COLOR = { none: "#4ade80", low: "#facc15", moderate: "#fb923c", high: "#f87171" };
+const RISK_GLOW  = { none: "#4ade8033", low: "#facc1533", moderate: "#fb923c33", high: "#f8717133" };
 
-  // ── Ticker bar ────────────────────────────────────────────────────────────
-  tickerWrap: {
-    background: "#0d9e5e",
-    padding: "10px 0",
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-  },
-  tickerInner: {
-    display: "inline-block",
-    animation: "ticker 28s linear infinite",
-    fontSize: "13px",
-    fontWeight: 600,
-    letterSpacing: "0.08em",
-    color: "#fff",
-  },
+function FloatingOrbs() {
+  return (
+    <div className="orbs">
+      <div className="orb orb1"/>
+      <div className="orb orb2"/>
+      <div className="orb orb3"/>
+    </div>
+  );
+}
 
-  // ── Header ────────────────────────────────────────────────────────────────
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "22px 56px",
-    borderBottom: "1px solid #1a1a1a",
-    position: "sticky",
-    top: 0,
-    background: "rgba(8,8,8,0.85)",
-    backdropFilter: "blur(24px)",
-    zIndex: 100,
-  },
-  logo: {
-    fontSize: "22px",
-    fontWeight: 800,
-    letterSpacing: "-0.04em",
-    color: "#fff",
-    margin: 0,
-  },
-  logoAccent: { color: "#0d9e5e" },
-  headerTag: {
-    fontSize: "12px",
-    color: "#555",
-    letterSpacing: "0.14em",
-    textTransform: "uppercase",
-    fontWeight: 500,
-  },
-  nav: { display: "flex", gap: "36px" },
-  navItem: {
-    fontSize: "13px",
-    color: "#888",
-    textDecoration: "none",
-    letterSpacing: "0.04em",
-    cursor: "pointer",
-    transition: "color 0.2s",
-  },
+export default function App() {
+  const [file,     setFile]     = useState(null);
+  const [preview,  setPreview]  = useState(null);
+  const [result,   setResult]   = useState(null);
+  const [loading,  setLoading]  = useState(false);
+  const [loadStep, setLoadStep] = useState(0);
+  const [error,    setError]    = useState(null);
+  const inputRef = useRef();
 
-  // ── Hero ──────────────────────────────────────────────────────────────────
-  hero: {
-    padding: "110px 56px 80px",
-    maxWidth: "960px",
-    margin: "0 auto",
-  },
-  heroEyebrow: {
-    fontSize: "11px",
-    letterSpacing: "0.2em",
-    color: "#0d9e5e",
-    textTransform: "uppercase",
-    fontWeight: 700,
-    marginBottom: "20px",
-  },
-  heroH1: {
-    fontSize: "clamp(48px, 7vw, 86px)",
-    fontWeight: 900,
-    lineHeight: 1.0,
-    letterSpacing: "-0.04em",
-    margin: "0 0 28px",
-    color: "#fff",
-  },
-  heroSub: {
-    fontSize: "18px",
-    color: "#777",
-    lineHeight: 1.7,
-    maxWidth: "520px",
-    margin: "0 0 48px",
-  },
-  heroBtnRow: { display: "flex", gap: "16px", flexWrap: "wrap" },
-  btnPrimary: {
-    background: "#0d9e5e",
-    color: "#fff",
-    border: "none",
-    padding: "16px 36px",
-    borderRadius: "100px",
-    fontSize: "15px",
-    fontWeight: 700,
-    cursor: "pointer",
-    letterSpacing: "0.02em",
-    transition: "transform 0.15s, background 0.2s",
-  },
-  btnSecondary: {
-    background: "transparent",
-    color: "#fff",
-    border: "1px solid #2a2a2a",
-    padding: "16px 36px",
-    borderRadius: "100px",
-    fontSize: "15px",
-    fontWeight: 600,
-    cursor: "pointer",
-    letterSpacing: "0.02em",
-    transition: "border-color 0.2s",
-  },
-
-  // ── Stat bar ──────────────────────────────────────────────────────────────
-  stats: {
-    display: "flex",
-    gap: "0",
-    borderTop: "1px solid #151515",
-    borderBottom: "1px solid #151515",
-    margin: "0 56px 0",
-    maxWidth: "calc(100% - 112px)",
-  },
-  statItem: {
-    flex: 1,
-    padding: "32px 28px",
-    borderRight: "1px solid #151515",
-  },
-  statNum: {
-    fontSize: "36px",
-    fontWeight: 900,
-    color: "#fff",
-    letterSpacing: "-0.03em",
-  },
-  statLabel: {
-    fontSize: "12px",
-    color: "#555",
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    marginTop: "4px",
-  },
-
-  // ── Upload panel ──────────────────────────────────────────────────────────
-  uploadSection: {
-    padding: "80px 56px",
-    maxWidth: "960px",
-    margin: "0 auto",
-  },
-  sectionLabel: {
-    fontSize: "11px",
-    letterSpacing: "0.2em",
-    color: "#0d9e5e",
-    textTransform: "uppercase",
-    fontWeight: 700,
-    marginBottom: "16px",
-  },
-  sectionTitle: {
-    fontSize: "38px",
-    fontWeight: 900,
-    letterSpacing: "-0.04em",
-    margin: "0 0 40px",
-    color: "#fff",
-  },
-  uploadArea: {
-    border: "1.5px dashed #282828",
-    borderRadius: "20px",
-    padding: "56px 40px",
-    textAlign: "center",
-    background: "#0c0c0c",
-    cursor: "pointer",
-    transition: "border-color 0.2s",
-    position: "relative",
-    overflow: "hidden",
-  },
-  uploadIcon: { fontSize: "44px", marginBottom: "16px" },
-  uploadText: { color: "#555", fontSize: "15px", marginBottom: "24px" },
-  fileInput: { display: "none" },
-  fileName: {
-    marginTop: "12px",
-    fontSize: "13px",
-    color: "#0d9e5e",
-    fontWeight: 600,
-  },
-
-  // ── Result panel ──────────────────────────────────────────────────────────
-  resultSection: {
-    maxWidth: "960px",
-    margin: "0 auto 80px",
-    padding: "0 56px",
-  },
-  resultCard: {
-    background: "#0e0e0e",
-    border: "1px solid #1e1e1e",
-    borderRadius: "24px",
-    padding: "48px",
-    position: "relative",
-    overflow: "hidden",
-  },
-  resultGlow: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "1px",
-    background: "linear-gradient(90deg, transparent, #0d9e5e, transparent)",
-  },
-  diseaseTag: {
-    display: "inline-block",
-    fontSize: "11px",
-    letterSpacing: "0.2em",
-    color: "#0d9e5e",
-    textTransform: "uppercase",
-    fontWeight: 700,
-    marginBottom: "12px",
-  },
-  diseaseName: {
-    fontSize: "52px",
-    fontWeight: 900,
-    letterSpacing: "-0.04em",
-    margin: "0 0 32px",
-    color: "#fff",
-    lineHeight: 1.1,
-  },
-
-  // Confidence bar
-  confLabel: {
-    fontSize: "12px",
-    color: "#555",
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    marginBottom: "10px",
-    display: "flex",
-    justifyContent: "space-between",
-  },
-  barTrack: {
-    height: "6px",
-    background: "#191919",
-    borderRadius: "100px",
-    marginBottom: "48px",
-    overflow: "hidden",
-  },
-  barFill: (pct) => ({
-    height: "100%",
-    width: pct + "%",
-    background: "linear-gradient(90deg, #0d9e5e, #24e89f)",
-    borderRadius: "100px",
-    transition: "width 1.2s cubic-bezier(0.22,1,0.36,1)",
-  }),
-
-  // Info grid
-  infoGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "20px",
-  },
-  infoCard: {
-    background: "#111",
-    border: "1px solid #1e1e1e",
-    borderRadius: "16px",
-    padding: "28px",
-  },
-  infoCardTitle: {
-    fontSize: "11px",
-    letterSpacing: "0.16em",
-    color: "#0d9e5e",
-    textTransform: "uppercase",
-    fontWeight: 700,
-    marginBottom: "12px",
-  },
-  infoCardText: {
-    fontSize: "15px",
-    color: "#bbb",
-    lineHeight: 1.75,
-    margin: 0,
-  },
-
-  // ── Education ─────────────────────────────────────────────────────────────
-  eduSection: {
-    padding: "80px 56px",
-    maxWidth: "1200px",
-    margin: "0 auto",
-    borderTop: "1px solid #111",
-  },
-  eduGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "20px",
-    marginTop: "40px",
-  },
-  eduCard: {
-    background: "#0c0c0c",
-    border: "1px solid #1a1a1a",
-    borderRadius: "20px",
-    padding: "32px",
-    transition: "border-color 0.2s, transform 0.2s",
-  },
-  eduIcon: { fontSize: "32px", marginBottom: "16px" },
-  eduTitle: {
-    fontSize: "16px",
-    fontWeight: 800,
-    color: "#fff",
-    marginBottom: "12px",
-  },
-  eduText: {
-    fontSize: "14px",
-    color: "#666",
-    lineHeight: 1.8,
-    margin: 0,
-  },
-
-  // ── Quote strip ───────────────────────────────────────────────────────────
-  quoteStrip: {
-    background: "#0d9e5e",
-    padding: "56px",
-    textAlign: "center",
-    margin: "0",
-  },
-  quoteText: {
-    fontSize: "clamp(28px, 4vw, 48px)",
-    fontWeight: 900,
-    letterSpacing: "-0.03em",
-    color: "#fff",
-    margin: "0 auto",
-    maxWidth: "800px",
-    lineHeight: 1.15,
-  },
-  quoteSub: {
-    fontSize: "14px",
-    color: "rgba(255,255,255,0.6)",
-    marginTop: "12px",
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-  },
-
-  // ── Footer ────────────────────────────────────────────────────────────────
-  footer: {
-    padding: "40px 56px",
-    borderTop: "1px solid #111",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: "16px",
-  },
-  footerLeft: { fontSize: "13px", color: "#444" },
-  footerRight: { fontSize: "13px", color: "#444" },
-
-  // ── Loading state ─────────────────────────────────────────────────────────
-  loadingBox: {
-    maxWidth: "960px",
-    margin: "0 auto 60px",
-    padding: "0 56px",
-    textAlign: "center",
-  },
-  loadingText: {
-    fontSize: "18px",
-    color: "#0d9e5e",
-    fontWeight: 700,
-    letterSpacing: "0.04em",
-  },
-  loadingDots: { color: "#333", fontSize: "32px" },
-};
-
-// ─── Education data ────────────────────────────────────────────────────────────
-const EDU = [
-  {
-    icon: "🦠",
-    title: "Why Diseases Spread",
-    text: "Fungal spores travel through air and water. High humidity, excess irrigation, and poor air circulation create the perfect environment. Rain spreads infection leaf to leaf rapidly.",
-  },
-  {
-    icon: "🔎",
-    title: "Early Symptoms",
-    text: "Check for small yellow or brown spots, water-soaked patches, curling edges, and unusual dark rings. Early-stage spots are small — don't wait for them to grow large.",
-  },
-  {
-    icon: "🌿",
-    title: "Prevention First",
-    text: "Use certified disease-free seeds. Space plants 40–50 cm apart for airflow. Water at soil level only. Remove and destroy infected leaves immediately.",
-  },
-  {
-    icon: "💊",
-    title: "Pesticide Safety",
-    text: "Always match pesticide to detected disease. Spray at dawn or dusk. Wear gloves, mask and goggles. Never exceed recommended dosage — overuse harms soil health.",
-  },
-  {
-    icon: "📅",
-    title: "Crop Monitoring Routine",
-    text: "Inspect plants every 3–4 days. Take photos of suspicious leaves. Rotate crops each season to break disease cycles. Record treatment dates in a notebook.",
-  },
-  {
-    icon: "📈",
-    title: "Improve Your Yield",
-    text: "Healthy crops produce 30–50% more. Combine soil testing, balanced fertiliser, drip irrigation and AI-based disease detection to maximise your harvest every season.",
-  },
-];
-
-// ─── Component ─────────────────────────────────────────────────────────────────
-export default function KrishiDrishti() {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const fileRef = useRef(null);
+  useEffect(() => {
+    if (!loading) { setLoadStep(0); return; }
+    const steps = [800, 1800, 2800];
+    const timers = steps.map((t, i) => setTimeout(() => setLoadStep(i + 1), t));
+    return () => timers.forEach(clearTimeout);
+  }, [loading]);
 
   const handleFile = (f) => {
-    if (!f) return;
-    setFile(f);
-    setResult(null);
-    const reader = new FileReader();
-    reader.onload = (e) => setPreview(e.target.result);
-    reader.readAsDataURL(f);
+    if (!f || !f.type.startsWith("image/")) return;
+    setFile(f); setPreview(URL.createObjectURL(f));
+    setResult(null); setError(null);
   };
 
   const analyze = async () => {
-    if (!file) { alert("Please upload a leaf image first."); return; }
-    setLoading(true);
-    const fd = new FormData();
-    fd.append("file", file);
+    if (!file) return;
+    setLoading(true); setError(null); setResult(null);
+    const form = new FormData();
+    form.append("file", file);
     try {
-      const res = await axios.post("http://127.0.0.1:8000/predict", fd);
+      const res = await axios.post(`${BACKEND}/predict`, form);
       setResult(res.data);
-    } catch {
-      alert("Cannot reach backend. Make sure the FastAPI server is running at port 8000.");
+    } catch(err) {
+      const d = err?.response?.data?.detail || "";
+      if (d.includes("NOT_A_LEAF"))          setError("🍃 Not a tomato leaf! Please upload a real tomato plant leaf photo.");
+      else if (d.includes("LOW_CONFIDENCE")) setError("📸 Image not clear enough. Try a close-up in good lighting.");
+      else                                   setError("⏳ Server waking up. Wait 30 seconds and try again.");
     }
     setLoading(false);
   };
 
-  const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const reset = () => {
+    setFile(null); setPreview(null);
+    setResult(null); setError(null);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const loadSteps = ["📸 Reading image…", "🧠 Running AI model…", "📋 Preparing report…"];
 
   return (
-    <div style={S.root}>
-      {/* ── Keyframe injection ── */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&display=swap');
-        @keyframes ticker { from { transform: translateX(100vw) } to { transform: translateX(-100%) } }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
-        @keyframes spin { to { transform: rotate(360deg) } }
-        .btn-p:hover { background: #0a8a50 !important; transform: scale(1.03); }
-        .btn-s:hover { border-color: #444 !important; }
-        .edu-card:hover { border-color: #0d9e5e !important; transform: translateY(-4px); }
-        .upload-area:hover { border-color: #0d9e5e !important; }
-        .nav-item:hover { color: #fff !important; }
-        @media (max-width: 768px) {
-          .info-grid { grid-template-columns: 1fr !important; }
-          .edu-grid  { grid-template-columns: 1fr !important; }
-          .stats-row { flex-direction: column; margin: 0 !important; max-width:100% !important; }
-          .stats-row > * { border-right: none !important; border-bottom: 1px solid #151515; }
-          .hero-pad  { padding: 60px 24px 40px !important; }
-          .section-pad { padding: 48px 24px !important; }
-          .header-pad { padding: 18px 24px !important; }
-          .footer-pad { padding: 32px 24px !important; }
-          .quote-pad  { padding: 48px 24px !important; }
-        }
-      `}</style>
+    <div className="app">
+      <FloatingOrbs />
 
-      {/* ── Ticker ── */}
-      <div style={S.tickerWrap}>
-        <span style={S.tickerInner}>
-          &nbsp;&nbsp;&nbsp;🌾 KrishiDrishti — AI Crop Disease Detection &nbsp;•&nbsp;
-          Early detection saves crops &nbsp;•&nbsp; Trusted by Indian farmers &nbsp;•&nbsp;
-          Powered by Deep Learning &nbsp;•&nbsp; Upload. Detect. Protect. &nbsp;•&nbsp;
-          🌿 Smart Farming for a Better India &nbsp;•&nbsp;&nbsp;&nbsp;
-        </span>
+      {/* Ticker */}
+      <div className="ticker">
+        <div className="ticker-track">
+          {[0,1].map(i => (
+            <span key={i} className="ticker-inner">
+              🌿 AI Crop Doctor &nbsp;·&nbsp; 10 Tomato Diseases &nbsp;·&nbsp;
+              Free for Farmers &nbsp;·&nbsp; 89%+ Accuracy &nbsp;·&nbsp;
+              MobileNetV2 Deep Learning &nbsp;·&nbsp; कृषि दृष्टि &nbsp;·&nbsp;
+              Made in India 🇮🇳 &nbsp;·&nbsp;
+            </span>
+          ))}
+        </div>
       </div>
 
-      {/* ── Header ── */}
-      <header style={S.header} className="header-pad">
-        <div>
-          <h1 style={S.logo}>
-            Krishi<span style={S.logoAccent}>Drishti</span>
-          </h1>
-          <div style={S.headerTag}>कृषि दृष्टि — AI Crop Vision</div>
+      {/* Nav */}
+      <nav>
+        <div className="nav-logo">
+          <div className="nav-logo-mark">
+            <Sprout size={18} strokeWidth={2.5}/>
+          </div>
+          <div>
+            <div className="nav-name">KrishiDrishti</div>
+            <div className="nav-tagline">कृषि दृष्टि</div>
+          </div>
         </div>
-        <nav style={S.nav}>
-          {["Detect", "How It Works", "Farmer Guide"].map((n) => (
-            <span
-              key={n}
-              className="nav-item"
-              style={S.navItem}
-              onClick={() => scrollTo(n.toLowerCase().replace(/ /g, "-"))}
-            >{n}</span>
-          ))}
-        </nav>
-      </header>
+        <div className="nav-badge">🇮🇳 For Indian Farmers</div>
+      </nav>
 
-      {/* ── Hero ── */}
-      <section style={S.hero} className="hero-pad" id="detect">
-        <p style={S.heroEyebrow}>AI-Powered Agriculture · India</p>
-        <h1 style={S.heroH1}>Protect Your<br />Crops. Early.</h1>
-        <p style={S.heroSub}>
-          KrishiDrishti uses Convolutional Neural Networks trained on thousands
-          of crop images to detect diseases instantly — so farmers can act before
-          damage spreads.
-        </p>
-        <div style={S.heroBtnRow}>
-          <button
-            className="btn-p"
-            style={S.btnPrimary}
-            onClick={() => scrollTo("upload")}
-          >Analyze Your Crop →</button>
-          <button
-            className="btn-s"
-            style={S.btnSecondary}
-            onClick={() => scrollTo("farmer-guide")}
-          >Farmer Guide</button>
+      {/* Hero */}
+      <section className="hero">
+        <motion.div className="hero-inner"
+          initial={{ opacity: 0, y: 60 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}>
+
+          <div className="hero-eyebrow">
+            <span className="dot"/>
+            AI-Powered · MobileNetV2 · 10 Disease Classes
+          </div>
+
+          <h1 className="hero-title">
+            Your Crop Deserves<br/>
+            <span className="hero-accent">Expert Diagnosis</span>
+          </h1>
+
+          <p className="hero-sub">
+            Upload a tomato leaf. Our AI detects disease in seconds —
+            with treatment advice, pesticide names, and prices in INR.
+          </p>
+
+          <div className="hero-stats">
+            {[
+              { n: "89%+", l: "Accuracy" },
+              { n: "10",   l: "Diseases" },
+              { n: "16K+", l: "Images Trained" },
+              { n: "Free", l: "Always" },
+            ].map(({ n, l }) => (
+              <div key={l} className="hero-stat">
+                <div className="hero-stat-n">{n}</div>
+                <div className="hero-stat-l">{l}</div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div className="hero-visual"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}>
+          <div className="leaf-illustration">
+            <div className="leaf-glow"/>
+            <Leaf size={96} strokeWidth={1} className="leaf-icon-big"/>
+            <div className="leaf-ring leaf-ring1"/>
+            <div className="leaf-ring leaf-ring2"/>
+            <div className="leaf-ring leaf-ring3"/>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Upload / Result */}
+      <section className="main-section">
+        <AnimatePresence mode="wait">
+
+          {!result && (
+            <motion.div key="upload" className="upload-wrapper"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.6 }}>
+
+              <div className="upload-header">
+                <h2>Upload Leaf Photo</h2>
+                <p>Take a clear, well-lit photo of a single tomato leaf</p>
+              </div>
+
+              <div className="upload-zone"
+                onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add("drag"); }}
+                onDragLeave={e => e.currentTarget.classList.remove("drag")}
+                onDrop={e => { e.preventDefault(); e.currentTarget.classList.remove("drag"); handleFile(e.dataTransfer.files[0]); }}>
+
+                <input ref={inputRef} type="file" accept="image/*"
+                  onChange={e => handleFile(e.target.files[0])} hidden />
+
+                {!preview ? (
+                  <div className="upload-prompt" onClick={() => inputRef.current.click()}>
+                    <div className="upload-icon-wrap">
+                      <Upload size={28} strokeWidth={1.5}/>
+                    </div>
+                    <div className="upload-prompt-text">
+                      <strong>Drop your leaf photo here</strong>
+                      <span>or click to browse files</span>
+                    </div>
+                    <div className="upload-hint">JPG, PNG supported · Max 10MB</div>
+                  </div>
+                ) : (
+                  <div className="preview-layout">
+                    <div className="preview-img-wrap">
+                      <img src={preview} alt="leaf"/>
+                      <div className="preview-img-overlay">
+                        <button className="change-btn" onClick={reset}>Change</button>
+                      </div>
+                    </div>
+                    <div className="preview-details">
+                      <div className="preview-filename">{file.name}</div>
+                      <div className="preview-filesize">{(file.size/1024).toFixed(1)} KB</div>
+
+                      {!loading && !error && (
+                        <button className="analyze-btn" onClick={analyze}>
+                          <span>🔬 Detect Disease</span>
+                          <div className="analyze-btn-shine"/>
+                        </button>
+                      )}
+
+                      {loading && (
+                        <div className="loading-state">
+                          <div className="loading-spinner">
+                            <div className="spinner-ring"/>
+                            <Leaf size={18} className="spinner-leaf"/>
+                          </div>
+                          <div className="loading-steps">
+                            {loadSteps.map((s, i) => (
+                              <div key={i} className={`load-step ${loadStep > i ? "done" : loadStep === i ? "active" : ""}`}>
+                                <div className="load-dot"/>
+                                <span>{s}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {!loading && error && (
+                        <div className="error-card">
+                          <AlertTriangle size={16}/>
+                          <span>{error}</span>
+                        </div>
+                      )}
+
+                      {!loading && error && (
+                        <div style={{display:"flex",gap:"10px",marginTop:"8px",flexWrap:"wrap"}}>
+                          <button className="analyze-btn" onClick={analyze} style={{fontSize:"13px",padding:"10px 20px"}}>
+                            <span>Try Again</span>
+                          </button>
+                          <button className="reset-btn" onClick={reset}>
+                            <RotateCcw size={14}/> Change Photo
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {result && (
+            <motion.div key="result" className="result-wrapper"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.7 }}>
+
+              {/* Result Hero */}
+              <div className="result-hero"
+                style={{ "--rc": RISK_COLOR[result.risk], "--rg": RISK_GLOW[result.risk] }}>
+                <div className="result-hero-left">
+                  <div className="result-label">AI Diagnosis Complete</div>
+                  <h2 className="result-name">
+                    {result.emoji} {result.disease}
+                  </h2>
+                  <div className="result-risk-badge">
+                    {result.risk === "none"
+                      ? <><CheckCircle size={14}/> Healthy — No Disease Found</>
+                      : result.risk === "high"
+                        ? <><AlertTriangle size={14}/> High Risk — Act Immediately</>
+                        : result.risk === "moderate"
+                          ? <><AlertTriangle size={14}/> Moderate Risk — Act This Week</>
+                          : <><AlertTriangle size={14}/> Low Risk — Monitor Closely</>}
+                  </div>
+                </div>
+
+                <div className="result-conf-wrap">
+                  <svg className="conf-ring-svg" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8"/>
+                    <motion.circle cx="60" cy="60" r="50" fill="none"
+                      stroke={RISK_COLOR[result.risk]} strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 50}`}
+                      initial={{ strokeDashoffset: `${2 * Math.PI * 50}` }}
+                      animate={{ strokeDashoffset: `${2 * Math.PI * 50 * (1 - result.confidence / 100)}` }}
+                      transition={{ duration: 1.8, ease: "easeOut" }}
+                      transform="rotate(-90 60 60)"/>
+                  </svg>
+                  <div className="conf-inner">
+                    <div className="conf-pct">{result.confidence}%</div>
+                    <div className="conf-lbl">confidence</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Leaf + Meta */}
+              <div className="result-meta-row">
+                <img src={preview} alt="analyzed leaf" className="result-thumb"/>
+                <div className="result-meta-items">
+                  {[
+                    ["Disease",    result.disease],
+                    ["Confidence", `${result.confidence}%`],
+                    ["Risk Level", result.risk === "none" ? "None" : result.risk],
+                    ["File",       file.name],
+                  ].map(([k, v]) => (
+                    <div key={k} className="meta-chip">
+                      <span className="meta-chip-k">{k}</span>
+                      <span className="meta-chip-v"
+                        style={k === "Risk Level" ? { color: RISK_COLOR[result.risk], textTransform: "capitalize" } : {}}>
+                        {v}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Info Cards */}
+              <div className="info-cards">
+                {[
+                  { icon: <FlaskConical size={20}/>, label: "Cause of Disease",      key: "causes",     accent: "#f87171" },
+                  { icon: <Eye size={20}/>,           label: "Symptoms",             key: "symptoms",   accent: "#fb923c" },
+                  { icon: <Shield size={20}/>,        label: "Prevention",           key: "prevention", accent: "#4ade80" },
+                  { icon: <Leaf size={20}/>,          label: "Treatment & Pesticide",key: "pesticide",  accent: "#60a5fa",
+                    extra: `💰 ${result.info.price}` },
+                ].map(({ icon, label, key, accent, extra }, idx) => (
+                  <motion.div key={key} className="info-card"
+                    style={{ "--a": accent }}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1, duration: 0.5 }}>
+                    <div className="info-card-icon" style={{ color: accent, background: `${accent}15` }}>
+                      {icon}
+                    </div>
+                    <div className="info-card-label">{label}</div>
+                    <p className="info-card-text">{result.info[key]}</p>
+                    {extra && <div className="info-card-price">{extra}</div>}
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Probabilities */}
+              <div className="probs-card">
+                <div className="probs-title">📊 All Disease Probabilities</div>
+                <div className="probs-list">
+                  {Object.entries(result.all_probabilities)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([name, prob], i) => (
+                      <div key={name} className={`prob-row ${name === result.disease ? "prob-row-top" : ""}`}>
+                        <span className="prob-name">{name}</span>
+                        <div className="prob-track">
+                          <motion.div className="prob-fill"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.max(prob, 0.5)}%` }}
+                            transition={{ duration: 1, delay: i * 0.05, ease: "easeOut" }}
+                            style={{
+                              background: name === result.disease
+                                ? `linear-gradient(90deg, ${RISK_COLOR[result.risk]}, ${RISK_COLOR[result.risk]}99)`
+                                : "rgba(255,255,255,0.1)"
+                            }}/>
+                        </div>
+                        <span className="prob-val">{prob}%</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              <div className="result-actions">
+                <button className="reset-btn" onClick={reset}>
+                  <RotateCcw size={15}/> Analyze Another Leaf
+                </button>
+              </div>
+
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
+
+      {/* Disease Library */}
+      <section className="library-section">
+        <div className="section-tag">Disease Library</div>
+        <h2 className="section-title">10 Diseases We Detect</h2>
+        <p className="section-sub">Compare your leaf with these disease profiles before uploading.</p>
+        <div className="library-grid">
+          {[
+            { em:"🦠", name:"Bacterial Spot",        risk:"High",     rc:"#f87171", desc:"Water-soaked brown spots with yellow halos. Spreads via rain splash." },
+            { em:"🟤", name:"Early Blight",           risk:"Moderate", rc:"#fb923c", desc:"Dark circular rings on older leaves. Caused by Alternaria solani fungus." },
+            { em:"🖤", name:"Late Blight",             risk:"High",     rc:"#f87171", desc:"Rapid dark patches. Can destroy entire crop in days." },
+            { em:"🟡", name:"Leaf Mold",               risk:"Low",      rc:"#facc15", desc:"Yellow patches above, fuzzy coating below. Needs high humidity." },
+            { em:"⚪", name:"Septoria Leaf Spot",      risk:"Moderate", rc:"#fb923c", desc:"White-centred spots on lower leaves. Spreads through water." },
+            { em:"🕷️", name:"Spider Mites",            risk:"Moderate", rc:"#fb923c", desc:"Bronze stippling and webbing. Thrives in hot dry conditions." },
+            { em:"🎯", name:"Target Spot",             risk:"Moderate", rc:"#fb923c", desc:"Concentric ring spots on leaves and stems." },
+            { em:"🌀", name:"Yellow Leaf Curl Virus",  risk:"High",     rc:"#f87171", desc:"Leaves curl yellow. Spread by whiteflies. No cure." },
+            { em:"🧩", name:"Mosaic Virus",            risk:"High",     rc:"#f87171", desc:"Mottled green mosaic. Spreads by contact and tools." },
+            { em:"🟢", name:"Healthy",                 risk:"None",     rc:"#4ade80", desc:"Deep green uniform leaves. No spots or issues." },
+          ].map(({ em, name, risk, rc, desc }) => (
+            <div key={name} className="lib-card">
+              <div className="lib-em">{em}</div>
+              <div className="lib-name">{name}</div>
+              <div className="lib-desc">{desc}</div>
+              <div className="lib-risk" style={{ color: rc, borderColor: `${rc}30`, background: `${rc}10` }}>
+                {risk} Risk
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ── Stats ── */}
-      <div style={S.stats} className="stats-row">
+      {/* Trust Bar */}
+      <div className="trust-bar">
         {[
-          { num: "95.6%", label: "Detection Accuracy" },
-          { num: "4", label: "Disease Classes" },
-          { num: "6,800+", label: "Training Images" },
-          { num: "< 3s", label: "Average Analysis Time" },
-        ].map((s) => (
-          <div key={s.label} style={S.statItem}>
-            <div style={S.statNum}>{s.num}</div>
-            <div style={S.statLabel}>{s.label}</div>
+          { icon:"🤖", k:"Model",    v:"MobileNetV2 Transfer Learning" },
+          { icon:"🎯", k:"Accuracy", v:"89%+ Validated" },
+          { icon:"🌾", k:"Dataset",  v:"PlantVillage 16,000+ Images" },
+          { icon:"🇮🇳", k:"Origin",   v:"Built in India" },
+        ].map(({ icon, k, v }) => (
+          <div key={k} className="trust-item">
+            <div className="trust-icon">{icon}</div>
+            <div><div className="trust-k">{k}</div><div className="trust-v">{v}</div></div>
           </div>
         ))}
       </div>
 
-      {/* ── Upload ── */}
-      <section id="upload" style={S.uploadSection} className="section-pad">
-        <p style={S.sectionLabel}>Step 1</p>
-        <h2 style={S.sectionTitle}>Upload a Leaf Photo</h2>
-
-        <div
-          className="upload-area"
-          style={S.uploadArea}
-          onClick={() => fileRef.current.click()}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]); }}
-        >
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            style={S.fileInput}
-            onChange={(e) => handleFile(e.target.files[0])}
-          />
-          {preview ? (
-            <img
-              src={preview}
-              alt="preview"
-              style={{ maxHeight: 240, maxWidth: "100%", borderRadius: 12, objectFit: "contain" }}
-            />
-          ) : (
-            <>
-              <div style={S.uploadIcon}>🌿</div>
-              <p style={S.uploadText}>
-                Drag & drop your leaf image here, or click to browse.<br />
-                JPG, PNG accepted.
-              </p>
-            </>
-          )}
-          {file && <div style={S.fileName}>✓ {file.name}</div>}
+      {/* Footer */}
+      <footer>
+        <div className="footer-left">
+          <div className="footer-brand">KrishiDrishti</div>
+          <div className="footer-copy">©2026 KrishiDrishti India Pvt. Ltd</div>
         </div>
-
-        {file && !loading && (
-          <div style={{ marginTop: "24px", textAlign: "center" }}>
-            <button className="btn-p" style={S.btnPrimary} onClick={analyze}>
-              Detect Disease →
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* ── Loading ── */}
-      {loading && (
-        <div style={S.loadingBox} className="section-pad">
-          <div style={S.loadingText}>
-            <span style={{ display: "inline-block", animation: "spin 1s linear infinite", marginRight: 8 }}>⟳</span>
-            AI Vision Processing…
-          </div>
-          <p style={{ color: "#333", fontSize: 14, marginTop: 8 }}>
-            Analyzing texture, color patterns and lesion signatures
-          </p>
-        </div>
-      )}
-
-      {/* ── Result ── */}
-      {result && (
-        <section id="result" style={S.resultSection} className="section-pad">
-          <div style={S.resultCard}>
-            <div style={S.resultGlow} />
-            <div style={S.diseaseTag}>Detection Result</div>
-            <h2 style={S.diseaseName}>{result.disease}</h2>
-
-            <div style={S.confLabel}>
-              <span>Model Confidence</span>
-              <span style={{ color: "#0d9e5e" }}>{result.confidence}%</span>
-            </div>
-            <div style={S.barTrack}>
-              <div style={S.barFill(result.confidence)} />
-            </div>
-
-            <div className="info-grid" style={S.infoGrid}>
-              {[
-                {
-                  title: "Cause",
-                  text: result.info.causes +
-                    " Diseases typically thrive in moist, warm conditions. Fungal spores can survive in soil between seasons — early action is critical.",
-                },
-                {
-                  title: "Symptoms",
-                  text: result.info.symptoms +
-                    " Inspect both upper and lower leaf surfaces. Discolouration often appears first near leaf margins before spreading inward.",
-                },
-                {
-                  title: "Prevention",
-                  text: result.info.prevention +
-                    " Remove and bag infected plant material — never compost it. Rotate crops each season and choose resistant seed varieties when available.",
-                },
-                {
-                  title: "Recommended Pesticide",
-                  text: result.info.pesticide +
-                    " Always read the label. Spray during cool morning hours for best absorption. Avoid spraying before rain to prevent runoff.",
-                },
-              ].map((c) => (
-                <div key={c.title} style={S.infoCard}>
-                  <div style={S.infoCardTitle}>{c.title}</div>
-                  <p style={S.infoCardText}>{c.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ── Quote Strip ── */}
-      <div style={S.quoteStrip} className="quote-pad">
-        <p style={S.quoteText}>"A farmer who detects early, loses nothing."</p>
-        <p style={S.quoteSub}>KrishiDrishti — Built for India's Farmers</p>
-      </div>
-
-      {/* ── Education ── */}
-      <section id="farmer-guide" style={S.eduSection} className="section-pad">
-        <p style={S.sectionLabel}>Farmer Guide</p>
-        <h2 style={S.sectionTitle}>Know Your Crops</h2>
-        <div className="edu-grid" style={S.eduGrid}>
-          {EDU.map((e) => (
-            <div key={e.title} className="edu-card" style={S.eduCard}>
-              <div style={S.eduIcon}>{e.icon}</div>
-              <div style={S.eduTitle}>{e.title}</div>
-              <p style={S.eduText}>{e.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── How it works ── */}
-      <section id="how-it-works" style={{ ...S.eduSection, borderTop: "1px solid #111" }} className="section-pad">
-        <p style={S.sectionLabel}>Technology</p>
-        <h2 style={S.sectionTitle}>How KrishiDrishti Works</h2>
-        <div className="edu-grid" style={{ ...S.eduGrid, gridTemplateColumns: "repeat(3,1fr)" }}>
-          {[
-            { step: "01", title: "Upload Leaf Photo", text: "Take a clear photo of an affected leaf. Good lighting helps — natural daylight works best." },
-            { step: "02", title: "AI Analysis", text: "Our CNN model scans texture, colour variation and lesion patterns across 224×224 pixel regions." },
-            { step: "03", title: "Get Your Result", text: "Receive disease identification, confidence score, causes, prevention steps and pesticide recommendation instantly." },
-          ].map((s) => (
-            <div key={s.step} className="edu-card" style={S.eduCard}>
-              <div style={{ fontSize: "11px", color: "#0d9e5e", fontWeight: 800, letterSpacing: "0.2em", marginBottom: 12 }}>{s.step}</div>
-              <div style={S.eduTitle}>{s.title}</div>
-              <p style={S.eduText}>{s.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Footer ── */}
-      <footer style={S.footer} className="footer-pad">
-        <div style={S.footerLeft}>
-          ©2026 "KrishiDrishti" India Pvt. Ltd · All rights reserved
-        </div>
-        <div style={S.footerRight}>
-          Made in India · AI for Farmers · कृषि दृष्टि
-        </div>
+        <div className="footer-quote">"Strong Farmers Build a Strong Nation 🇮🇳"</div>
       </footer>
+
     </div>
   );
 }
