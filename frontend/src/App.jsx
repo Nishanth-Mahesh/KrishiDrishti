@@ -1,22 +1,42 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import { Upload, Leaf, AlertTriangle, CheckCircle, RotateCcw, ChevronDown, Sprout, Shield, FlaskConical, Eye, Microscope } from "lucide-react";
 import "./App.css";
 
 const BACKEND = "https://krishidrishti-6ich.onrender.com";
-const RC = { none: "#4ade80", low: "#facc15", moderate: "#fb923c", high: "#f87171" };
 
-const TICKER_ITEMS = [
-  "🌿 Early Blight: Remove infected leaves immediately and spray Mancozeb",
-  "💧 Water tomato plants at base — never wet the leaves",
-  "🌡️ Late Blight spreads fast in cool, wet weather — act within 24 hours",
-  "🐛 Check leaf undersides weekly for Spider Mites and whiteflies",
-  "🌱 Rotate crops every season to prevent soil-borne diseases",
-  "☀️ Plant tomatoes in full sun — 6 to 8 hours daily for healthy growth",
-  "💊 Copper Oxychloride prevents Bacterial Spot — spray every 7 days",
-  "🇮🇳 KrishiDrishti — Free AI disease detection for Indian farmers",
-  "🧪 Neem Oil spray every 15 days protects against pests and fungi",
-  "📸 Upload a clear close-up leaf photo for best AI accuracy",
+const RISK_COLOR = {
+  none: "#22c55e",
+  low: "#eab308",
+  moderate: "#f97316",
+  high: "#ef4444",
+};
+
+const DISEASE_INFO = {
+  "Bacterial Spot": { risk: "high", emoji: "🦠", causes: "Xanthomonas bacteria spread through rain splash, wind, and infected seeds.", symptoms: "Small water-soaked dark spots with yellow halos. Leaves drop early.", prevention: "Use certified disease-free seeds. Avoid overhead irrigation. Remove infected debris.", pesticide: "Copper Oxychloride 50 WP — mix 3g per litre. Spray every 7–10 days.", price: "₹350 – ₹500 per kg" },
+  "Early Blight": { risk: "moderate", emoji: "🟤", causes: "Alternaria solani fungus. Spreads through infected soil and water splash.", symptoms: "Dark brown circular spots with concentric rings and yellow halo on older leaves.", prevention: "Remove infected leaves. Rotate crops. Avoid wetting leaves when watering.", pesticide: "Mancozeb 75 WP — mix 2g per litre. Spray every 7 days after rain.", price: "₹450 – ₹600 per kg" },
+  "Late Blight": { risk: "high", emoji: "🖤", causes: "Phytophthora infestans — extremely aggressive. Destroys entire crop in days.", symptoms: "Large dark water-soaked patches spreading fast. White fuzzy growth under leaves.", prevention: "Act IMMEDIATELY. Remove and burn infected plants. Stop irrigation 2–3 days.", pesticide: "Metalaxyl + Mancozeb (Ridomil Gold MZ) — spray every 5 days.", price: "₹800 – ₹1,200 per kg" },
+  "Leaf Mold": { risk: "low", emoji: "🟡", causes: "Passalora fulva fungus. Thrives in high humidity and poor air circulation.", symptoms: "Yellow patches on upper leaf. Olive-green fuzzy coating on underside.", prevention: "Prune for airflow. Water at base only. Reduce plant density.", pesticide: "Chlorothalonil 75 WP — spray leaf undersides. Repeat every 10 days.", price: "₹500 – ₹700 per kg" },
+  "Septoria Leaf Spot": { risk: "moderate", emoji: "⚪", causes: "Septoria lycopersici fungus. Spreads through water splash and plant debris.", symptoms: "Small circular spots with white centres and dark borders on lower leaves.", prevention: "Remove lower leaves. Mulch soil to prevent water splash. Rotate crops.", pesticide: "Mancozeb or Chlorothalonil — spray every 7–10 days from first sign.", price: "₹400 – ₹600 per kg" },
+  "Spider Mites": { risk: "moderate", emoji: "🕷️", causes: "Tetranychus urticae mites thrive in hot dry conditions.", symptoms: "Fine yellow stippling on leaves. Tiny webbing on undersides. Leaves turn bronze.", prevention: "Keep plants watered. Spray water under leaves. Avoid dusty conditions.", pesticide: "Abamectin 1.8 EC — spray leaf undersides thoroughly. Rotate miticides.", price: "₹600 – ₹900 per 100ml" },
+  "Target Spot": { risk: "moderate", emoji: "🎯", causes: "Corynespora cassiicola fungus. Warm temperature and high humidity.", symptoms: "Circular brown spots with concentric ring pattern on leaves and stems.", prevention: "Improve air circulation. Remove infected leaves. Avoid excess nitrogen.", pesticide: "Azoxystrobin + Difenoconazole (Amistar Top) — spray every 14 days.", price: "₹900 – ₹1,400 per litre" },
+  "Tomato Yellow Leaf Curl Virus": { risk: "high", emoji: "🌀", causes: "TYLCV virus transmitted by whiteflies. No cure once infected.", symptoms: "Leaves curl upward and yellow. Stunted growth. Severely reduced fruit.", prevention: "Use yellow sticky traps. Use virus-resistant varieties. Remove infected plants.", pesticide: "Imidacloprid 17.8 SL — controls whitefly vector. Spray every 7 days.", price: "₹500 – ₹800 per litre" },
+  "Tomato Mosaic Virus": { risk: "high", emoji: "🧩", causes: "ToMV virus spreads through contact, infected tools, and handling.", symptoms: "Mottled light and dark green mosaic pattern. Leaves curl and distort.", prevention: "Disinfect tools with bleach. Wash hands before handling. Remove infected plants.", pesticide: "No chemical cure. Control aphids with Imidacloprid to stop spread.", price: "₹500 – ₹800 per litre (aphid control)" },
+  "Healthy": { risk: "none", emoji: "🟢", causes: "No disease detected. Your tomato plant is in great health.", symptoms: "Deep uniform green leaves, firm stems, no spots or yellowing.", prevention: "Monitor every 3–4 days. Maintain good spacing, drainage, and fertilisation.", pesticide: "No treatment needed. Continue your current care routine.", price: "No cost needed" },
+};
+
+const TICKER_TIPS = [
+  "🌱 Early detection saves your entire harvest — check leaves every 3 days",
+  "💧 Water tomato plants at the base — never wet the leaves",
+  "🦟 Yellow sticky traps prevent whitefly spread and Yellow Leaf Curl Virus",
+  "🌿 Rotate crops each season to break fungal disease cycles",
+  "☀️ Morning is the best time to spray pesticides — before heat of the day",
+  "🧤 Always wear gloves and mask when applying pesticides",
+  "🔬 Late Blight spreads fast in cool, wet weather — act within 24 hours",
+  "🌾 Certified disease-free seeds reduce Bacterial Spot risk by 80%",
+  "✂️ Prune lower leaves to improve airflow and prevent Leaf Mold",
+  "🕷️ Check leaf undersides weekly for Spider Mites and whiteflies",
 ];
 
 export default function App() {
@@ -24,20 +44,18 @@ export default function App() {
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(0);
+  const [loadStep, setLoadStep] = useState(0);
   const [error, setError] = useState(null);
-  const [drag, setDrag] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const inputRef = useRef();
 
   useEffect(() => {
-    if (!loading) { setStep(0); return; }
-    const t = [800, 1800, 2800].map((ms, i) => setTimeout(() => setStep(i + 1), ms));
-    return () => t.forEach(clearTimeout);
+    if (!loading) { setLoadStep(0); return; }
+    const timers = [600, 1400, 2400].map((ms, i) => setTimeout(() => setLoadStep(i + 1), ms));
+    return () => timers.forEach(clearTimeout);
   }, [loading]);
 
-  const handleFile = f => {
-    if (!f?.type.startsWith("image/")) return;
+  const handleFile = (f) => {
+    if (!f || !f.type.startsWith("image/")) return;
     setFile(f);
     setPreview(URL.createObjectURL(f));
     setResult(null);
@@ -45,397 +63,425 @@ export default function App() {
   };
 
   const analyze = async () => {
-    setLoading(true); setError(null); setResult(null);
-    const fd = new FormData(); fd.append("file", file);
+    if (!file) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    const fd = new FormData();
+    fd.append("file", file);
     try {
       const res = await axios.post(`${BACKEND}/predict`, fd);
-      setResult(res.data);
+      const data = res.data;
+      const diseaseName = data.disease || data.class || "Unknown";
+      const info = DISEASE_INFO[diseaseName] || DISEASE_INFO["Healthy"];
+      setResult({
+        disease: diseaseName,
+        confidence: data.confidence,
+        risk: info.risk,
+        emoji: info.emoji,
+        info: {
+          causes: info.causes,
+          symptoms: info.symptoms,
+          prevention: info.prevention,
+          pesticide: info.pesticide,
+          price: info.price,
+        },
+        all_probabilities: data.all_probabilities || data.all_predictions || {},
+      });
     } catch (err) {
-      const d = err?.response?.data?.detail || "";
-      if (d.includes("NOT_A_LEAF")) setError("Please upload a real tomato leaf photo only.");
-      else if (d.includes("LOW_CONFIDENCE")) setError("Image unclear. Use a close-up photo in good lighting.");
-      else setError("Server is starting up. Please wait 30 seconds and try again.");
+      const detail = err?.response?.data?.detail || "";
+      if (detail.includes("NOT_A_LEAF")) {
+        setError("🍃 Not a tomato leaf! Please upload a real tomato plant leaf photo.");
+      } else if (detail.includes("LOW_CONFIDENCE")) {
+        setError("📸 Image not clear enough. Try a close-up in good lighting.");
+      } else if (err?.code === "ERR_NETWORK") {
+        setError("⏳ Backend is waking up — please wait 30 seconds and try again.");
+      } else {
+        setError("⚠️ Something went wrong. Please try again.");
+      }
     }
     setLoading(false);
   };
 
   const reset = () => {
-    setFile(null); setPreview(null); setResult(null); setError(null);
+    setFile(null);
+    setPreview(null);
+    setResult(null);
+    setError(null);
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const riskLabel = r => ({ none: "Healthy", low: "Low Risk", moderate: "Moderate Risk", high: "High Risk" }[r] || r);
-  const STEPS = ["Reading image", "Running AI model", "Preparing report"];
+  const rc = result ? RISK_COLOR[result.risk] : RISK_COLOR.none;
 
   return (
     <div className="app">
-      {/* Ambient orbs */}
-      <div className="orbs">
-        <div className="orb o1" /><div className="orb o2" /><div className="orb o3" />
+      {/* Background orbs */}
+      <div className="bg-orbs" aria-hidden="true">
+        <div className="orb orb1" />
+        <div className="orb orb2" />
+        <div className="orb orb3" />
       </div>
 
-      {/* ── TICKER ── */}
-      <div className="ticker">
-        <div className="ticker-track">
-          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
-            <span key={i} className="tick-item">{item}<span className="tick-sep">·</span></span>
+      {/* Scrolling Ticker */}
+      <div className="ticker" role="marquee" aria-label="Farm tips">
+        <div className="ticker-inner">
+          {[...TICKER_TIPS, ...TICKER_TIPS].map((tip, i) => (
+            <span key={i} className="ticker-item">{tip}</span>
           ))}
         </div>
       </div>
 
-      {/* ── NAV ── */}
-      <header className="nav">
-        <div className="nav-wrap">
-          <a href="/" className="logo">
-            <div className="logo-ico">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C12 2 5 6 5 13C5 17.4 8.1 21 12 22C15.9 21 19 17.4 19 13C19 6 12 2 12 2Z"/>
-              </svg>
-            </div>
-            <span className="logo-name">KrishiDrishti</span>
-            <span className="logo-tag">AI</span>
-          </a>
-          <nav className="nav-links">
-            <a href="#how">How it works</a>
-            <a href="#diagnose">Diagnose</a>
-            <a href="#diseases">Diseases</a>
-          </nav>
-          <a href="#diagnose" className="nav-btn">Try Free →</a>
-          <button className="ham" onClick={() => setMenuOpen(!menuOpen)}>
-            <span/><span/><span/>
-          </button>
-        </div>
-        {menuOpen && (
-          <div className="mob-nav">
-            {["#how|How it works","#diagnose|Diagnose","#diseases|Diseases"].map(x => (
-              <a key={x} href={x.split("|")[0]} onClick={() => setMenuOpen(false)}>{x.split("|")[1]}</a>
-            ))}
-            <a href="#diagnose" className="mob-cta" onClick={() => setMenuOpen(false)}>Try Free →</a>
+      {/* Navigation */}
+      <nav className="nav">
+        <div className="nav-logo">
+          <div className="nav-icon">
+            <Sprout size={16} strokeWidth={2.5} />
           </div>
-        )}
-      </header>
+          <div className="nav-text">
+            <span className="nav-name">KrishiDrishti</span>
+            <span className="nav-sub">कृषि दृष्टि</span>
+          </div>
+        </div>
+        <div className="nav-badge">🇮🇳 Made for Indian Farmers</div>
+      </nav>
 
-      {/* ── HERO ── */}
+      {/* Hero */}
       <section className="hero">
-        <div className="wrap">
-          <motion.div initial={{opacity:0,y:48}} animate={{opacity:1,y:0}} transition={{duration:1,ease:[0.16,1,0.3,1]}}>
-            <div className="hero-pill">
-              <span className="pill-dot"/>AI-Powered · Made in India 🇮🇳
-            </div>
-            <h1 className="hero-h1">
-              Protect Your<br/>
-              <em>Tomato Crop</em><br/>
-              With AI
-            </h1>
-            <p className="hero-p">
-              Upload a leaf photo. Get instant disease diagnosis, treatment plan
-              and pesticide prices in ₹ — built for Indian farmers.
-            </p>
-            <div className="hero-btns">
-              <button className="btn-g" onClick={() => document.getElementById("diagnose").scrollIntoView({behavior:"smooth"})}>
-                Start Free Diagnosis
-              </button>
-              <button className="btn-o" onClick={() => document.getElementById("diseases").scrollIntoView({behavior:"smooth"})}>
-                View Disease Library
-              </button>
-            </div>
-          </motion.div>
-          <motion.div className="stats-row" initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{duration:1,delay:0.3}}>
-            {[["89%+","Accuracy"],["10","Diseases"],["16,000+","Training Images"],["Free","Always"]].map(([n,l]) => (
-              <div key={l} className="stat">
-                <div className="stat-n">{n}</div>
-                <div className="stat-l">{l}</div>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ── */}
-      <section className="sec" id="how">
-        <div className="wrap">
-          <div className="sec-tag">How it works</div>
-          <h2 className="sec-h2">Three steps to<br/>instant diagnosis</h2>
-          <div className="steps">
-            {[
-              {n:"01",icon:"📸",t:"Upload Photo",d:"Take a clear close-up of a tomato leaf in good natural light and upload it."},
-              {n:"02",icon:"🤖",t:"AI Analyzes",d:"MobileNetV2 deep learning scans for 10 disease patterns in seconds."},
-              {n:"03",icon:"💊",t:"Get Treatment",d:"Receive pesticide name, dosage and market prices in Indian Rupees."},
-            ].map(({n,icon,t,d},i) => (
-              <motion.div key={n} className="step"
-                initial={{opacity:0,y:24}} whileInView={{opacity:1,y:0}}
-                viewport={{once:true}} transition={{delay:i*0.15,duration:0.6}}>
-                <div className="step-n">{n}</div>
-                <div className="step-ico">{icon}</div>
-                <h3 className="step-t">{t}</h3>
-                <p className="step-d">{d}</p>
-              </motion.div>
-            ))}
+        <motion.div
+          className="hero-content"
+          initial={{ opacity: 0, y: 48 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className="hero-pill">
+            <span className="pill-dot" />
+            AI · MobileNetV2 · 10 Disease Classes · 89%+ Accuracy
           </div>
-        </div>
-      </section>
 
-      {/* ── DIAGNOSE ── */}
-      <section className="sec sec-alt" id="diagnose">
-        <div className="wrap">
-          <div className="sec-tag">Diagnosis Tool</div>
-          <h2 className="sec-h2">Upload your<br/>leaf photo</h2>
-          <p className="sec-p">Works best with close-up, well-lit photos of a single tomato leaf.</p>
+          <h1 className="hero-title">
+            Protect Your Crop<br />
+            <em className="hero-em">Before It's Too Late</em>
+          </h1>
 
-          <AnimatePresence mode="wait">
-            {!result ? (
-              <motion.div key="up" className="tool"
-                initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}
-                exit={{opacity:0}} transition={{duration:0.4}}>
-                <input ref={inputRef} type="file" accept="image/*"
-                  onChange={e => handleFile(e.target.files[0])} hidden/>
+          <p className="hero-desc">
+            Upload a tomato leaf photo. Our AI identifies disease in seconds
+            and gives you the exact pesticide, dosage, and cost in INR.
+          </p>
 
-                {!preview ? (
-                  <div className={`dz ${drag?"dz-on":""}`}
-                    onClick={() => inputRef.current.click()}
-                    onDragOver={e=>{e.preventDefault();setDrag(true)}}
-                    onDragLeave={() => setDrag(false)}
-                    onDrop={e=>{e.preventDefault();setDrag(false);handleFile(e.dataTransfer.files[0])}}>
-                    <div className="dz-ring">
-                      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                        <path d="M20 4C20 4 10 10 10 18C10 23.5 14.5 28 20 29.5C25.5 28 30 23.5 30 18C30 10 20 4 20 4Z"
-                          fill="#4ade80" opacity="0.15" stroke="#4ade80" strokeWidth="1.5"/>
-                        <path d="M20 12V24M15 17L20 12L25 17" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    <p className="dz-t">Drop your tomato leaf photo here</p>
-                    <p className="dz-s">or tap to browse &nbsp;·&nbsp; JPG, PNG &nbsp;·&nbsp; Max 10MB</p>
-                    <div className="dz-tip">💡 Use a close-up photo with good lighting for best accuracy</div>
-                  </div>
-                ) : (
-                  <div className="prev-wrap">
-                    <div className="prev-img-col">
-                      <img src={preview} alt="leaf" className="prev-img"/>
-                      <button className="prev-rm" onClick={reset}>✕ Remove</button>
-                    </div>
-                    <div className="prev-info">
-                      <p className="prev-name">{file.name}</p>
-                      <p className="prev-sz">{(file.size/1024).toFixed(1)} KB · Ready to analyze</p>
+          <button
+            className="hero-cta"
+            onClick={() => document.getElementById("upload-section").scrollIntoView({ behavior: "smooth" })}
+          >
+            Start Free Diagnosis
+            <ChevronDown size={16} />
+          </button>
 
-                      {!loading && !error && (
-                        <button className="btn-g full" onClick={analyze}>🔬 Detect Disease</button>
-                      )}
-                      {loading && (
-                        <div className="ldr">
-                          <div className="ldr-track">
-                            <motion.div className="ldr-fill"
-                              initial={{width:"0%"}}
-                              animate={{width:step===0?"20%":step===1?"55%":step===2?"82%":"97%"}}
-                              transition={{duration:0.8,ease:"easeInOut"}}/>
-                          </div>
-                          <div className="ldr-steps">
-                            {STEPS.map((s,i) => (
-                              <div key={i} className={`ls ${step>i?"ls-done":step===i?"ls-on":""}`}>
-                                <span>{step>i?"✓":step===i?"●":"○"}</span>
-                                <span>{s}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {!loading && error && (
-                        <div className="err-wrap">
-                          <div className="err-box">⚠️ {error}</div>
-                          <button className="btn-g full" onClick={analyze}>Try Again</button>
-                          <button className="btn-ghost full" onClick={reset}>Upload Different Photo</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            ) : (
-              <motion.div key="res" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.5}}>
-
-                {/* ── RESULT HERO ── */}
-                <div className="res-card" style={{"--rc":RC[result.risk]}}>
-                  <div className="res-top">
-                    <div className="res-left">
-                      <p className="res-tag">AI Diagnosis Complete</p>
-                      <h2 className="res-name">{result.emoji} {result.disease}</h2>
-                      <div className="res-chip" style={{background:`${RC[result.risk]}15`,color:RC[result.risk],border:`1px solid ${RC[result.risk]}35`}}>
-                        {result.risk==="none" ? "✓ Healthy — No Disease Detected" : `⚠ ${riskLabel(result.risk)} — Action Required`}
-                      </div>
-                    </div>
-                    <div className="res-right">
-                      <div className="ring-box">
-                        <svg viewBox="0 0 120 120" className="ring-svg">
-                          <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8"/>
-                          <motion.circle cx="60" cy="60" r="52" fill="none"
-                            stroke={RC[result.risk]} strokeWidth="8" strokeLinecap="round"
-                            strokeDasharray={`${2*Math.PI*52}`}
-                            initial={{strokeDashoffset:`${2*Math.PI*52}`}}
-                            animate={{strokeDashoffset:`${2*Math.PI*52*(1-result.confidence/100)}`}}
-                            transition={{duration:1.8,ease:"easeOut"}}
-                            transform="rotate(-90 60 60)"/>
-                        </svg>
-                        <div className="ring-mid">
-                          <span className="ring-pct" style={{color:RC[result.risk]}}>{result.confidence}%</span>
-                          <span className="ring-lbl">confidence</span>
-                        </div>
-                      </div>
-                      <img src={preview} alt="" className="res-thumb"/>
-                    </div>
-                  </div>
-                  <div className="res-meta">
-                    {[["Disease",result.disease],["Confidence",`${result.confidence}%`],["Risk",riskLabel(result.risk)],["File",file.name]].map(([k,v]) => (
-                      <div key={k} className="meta-item">
-                        <span className="mk">{k}</span>
-                        <span className="mv" style={k==="Risk"?{color:RC[result.risk],fontWeight:600}:{}}>{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ── INFO GRID ── */}
-                <div className="info-grid">
-                  {[
-                    {icon:"🧬",title:"Cause",     body:result.info.causes,     color:"#f87171"},
-                    {icon:"🔬",title:"Symptoms",  body:result.info.symptoms,   color:"#fb923c"},
-                    {icon:"🛡️",title:"Prevention",body:result.info.prevention, color:"#4ade80"},
-                    {icon:"💊",title:"Treatment", body:result.info.pesticide,  color:"#60a5fa", extra:result.info.price},
-                  ].map(({icon,title,body,color,extra},i) => (
-                    <motion.div key={title} className="i-card"
-                      initial={{opacity:0,y:16}} animate={{opacity:1,y:0}}
-                      transition={{delay:i*0.09,duration:0.45}}>
-                      <div className="i-top">
-                        <span className="i-ico" style={{background:`${color}15`,color}}>{icon}</span>
-                        <span className="i-title" style={{color}}>{title}</span>
-                      </div>
-                      <p className="i-body">{body}</p>
-                      {extra && <div className="i-price">💰 {extra}</div>}
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* ── CROP TIPS ── */}
-                <div className="tips-card">
-                  <h3 className="tips-title">🌱 Farming Tips for {result.disease}</h3>
-                  <div className="tips-grid">
-                    {result.risk === "none" ? [
-                      "✅ Keep monitoring your crop every 3–4 days",
-                      "💧 Water at the base of plants, never on leaves",
-                      "🌿 Apply neem oil spray every 15 days as prevention",
-                      "🌱 Maintain proper spacing for good air circulation",
-                    ] : result.risk === "high" ? [
-                      "🚨 Act immediately — do not delay treatment",
-                      "🗑️ Remove and burn all infected leaves today",
-                      "💊 Apply recommended pesticide within 24 hours",
-                      "🚫 Do not compost infected plant material",
-                      "📞 Consult local agriculture officer if spreading",
-                    ] : [
-                      "⚠️ Start treatment within 2–3 days",
-                      "✂️ Prune infected leaves carefully with clean scissors",
-                      "💊 Apply recommended fungicide/pesticide now",
-                      "👀 Monitor remaining plants daily for spread",
-                    ]}.map((tip, i) => (
-                      <div key={i} className="tip-item">{tip}</div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ── PROBABILITIES ── */}
-                <div className="prob-card">
-                  <h3 className="prob-title">All Disease Probabilities</h3>
-                  {Object.entries(result.all_probabilities).sort((a,b)=>b[1]-a[1]).map(([name,pct],i) => (
-                    <div key={name} className={`p-row ${name===result.disease?"p-hi":""}`}>
-                      <span className="p-name">{name}</span>
-                      <div className="p-track">
-                        <motion.div className="p-fill"
-                          initial={{width:0}} animate={{width:`${Math.max(pct,0.3)}%`}}
-                          transition={{duration:0.8,delay:i*0.04}}
-                          style={{background:name===result.disease?RC[result.risk]:"rgba(255,255,255,0.09)"}}/>
-                      </div>
-                      <span className="p-val">{pct}%</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="res-btn-row">
-                  <button className="btn-o" onClick={reset}>↩ Analyze Another Leaf</button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </section>
-
-      {/* ── DISEASE LIBRARY ── */}
-      <section className="sec" id="diseases">
-        <div className="wrap">
-          <div className="sec-tag">Disease Library</div>
-          <h2 className="sec-h2">10 conditions<br/>we identify</h2>
-          <p className="sec-p">Trained on 16,000+ PlantVillage images with 89%+ accuracy.</p>
-          <div className="dis-grid">
+          <div className="hero-stats">
             {[
-              {e:"🦠",n:"Bacterial Spot",       r:"High",    c:"#f87171",d:"Brown spots with yellow halos. Xanthomonas bacteria."},
-              {e:"🟤",n:"Early Blight",          r:"Moderate",c:"#fb923c",d:"Concentric ring spots on older leaves. Alternaria fungus."},
-              {e:"🖤",n:"Late Blight",            r:"High",    c:"#f87171",d:"Dark patches spreading fast. Can destroy crop in days."},
-              {e:"🟡",n:"Leaf Mold",              r:"Low",     c:"#facc15",d:"Pale yellow spots, olive mold below. High humidity."},
-              {e:"⚪",n:"Septoria Leaf Spot",     r:"Moderate",c:"#fb923c",d:"White-centered spots. Spreads by rain splash."},
-              {e:"🕷️",n:"Spider Mites",           r:"Moderate",c:"#fb923c",d:"Bronze stippling, webbing below leaves. Hot dry weather."},
-              {e:"🎯",n:"Target Spot",            r:"Moderate",c:"#fb923c",d:"Target ring pattern on leaves and stems."},
-              {e:"🌀",n:"Yellow Leaf Curl",       r:"High",    c:"#f87171",d:"Curling yellow leaves. Spread by whiteflies."},
-              {e:"🧩",n:"Mosaic Virus",           r:"High",    c:"#f87171",d:"Mottled mosaic pattern. Spreads by contact."},
-              {e:"🟢",n:"Healthy",                r:"None",    c:"#4ade80",d:"Deep green, uniform. No disease detected."},
-            ].map(({e,n,r,c,d}) => (
-              <div key={n} className="d-card">
-                <span className="d-e">{e}</span>
-                <h4 className="d-n">{n}</h4>
-                <p className="d-d">{d}</p>
-                <span className="d-r" style={{color:c,background:`${c}12`,border:`1px solid ${c}30`}}>{r}</span>
+              { n: "89%+", l: "Accuracy" },
+              { n: "10", l: "Diseases" },
+              { n: "16K+", l: "Images" },
+              { n: "Free", l: "Always" },
+            ].map(({ n, l }) => (
+              <div key={l} className="stat-item">
+                <span className="stat-num">{n}</span>
+                <span className="stat-lbl">{l}</span>
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
+
+        <motion.div
+          className="hero-visual"
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+          aria-hidden="true"
+        >
+          <div className="leaf-orb">
+            <div className="leaf-glow" />
+            <Leaf size={88} strokeWidth={1} className="leaf-svg" />
+            <div className="ring r1" />
+            <div className="ring r2" />
+            <div className="ring r3" />
+          </div>
+        </motion.div>
       </section>
 
-      {/* ── TRUST STRIP ── */}
-      <div className="trust">
-        <div className="trust-wrap">
+      {/* Upload / Result Section */}
+      <section className="main-section" id="upload-section">
+        <AnimatePresence mode="wait">
+          {!result ? (
+            <motion.div
+              key="upload"
+              className="upload-card"
+              initial={{ opacity: 0, y: 32 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.55 }}
+            >
+              <div className="card-header">
+                <div className="card-icon">
+                  <Upload size={18} />
+                </div>
+                <div>
+                  <h2 className="card-title">Upload Leaf Photo</h2>
+                  <p className="card-subtitle">Take a clear, well-lit photo of a single tomato leaf</p>
+                </div>
+              </div>
+
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => handleFile(e.target.files[0])}
+                hidden
+              />
+
+              {!preview ? (
+                <div
+                  className="drop-zone"
+                  onClick={() => inputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("drag-over"); }}
+                  onDragLeave={(e) => e.currentTarget.classList.remove("drag-over")}
+                  onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove("drag-over"); handleFile(e.dataTransfer.files[0]); }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+                >
+                  <div className="drop-icon">
+                    <Leaf size={36} strokeWidth={1} />
+                  </div>
+                  <p className="drop-title">Drop leaf photo here</p>
+                  <p className="drop-hint">or tap to take photo / browse · JPG, PNG · Max 10MB</p>
+                </div>
+              ) : (
+                <div className="preview-wrap">
+                  <img src={preview} alt="Uploaded leaf" className="preview-img" />
+                  <div className="preview-info">
+                    <p className="preview-name">{file.name}</p>
+                    <p className="preview-size">{(file.size / 1024).toFixed(1)} KB · Ready</p>
+
+                    {!loading && (
+                      <>
+                        <button className="btn-analyze" onClick={analyze}>
+                          🔬 Detect Disease
+                        </button>
+                        <button className="btn-ghost" onClick={reset}>
+                          Change Photo
+                        </button>
+                      </>
+                    )}
+
+                    {loading && (
+                      <div className="loader-wrap">
+                        <div className="loader-ring" />
+                        <div className="loader-steps">
+                          {["Reading image", "Running AI model", "Building report"].map((s, i) => (
+                            <div key={i} className={`lstep ${loadStep > i ? "done" : loadStep === i ? "active" : ""}`}>
+                              <span className="lstep-dot" />
+                              <span>{s}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {error && (
+                      <div className="error-box">
+                        <AlertTriangle size={14} />
+                        <span>{error}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="result"
+              initial={{ opacity: 0, y: 32 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              {/* Diagnosis Banner */}
+              <div className="dx-banner" style={{ "--rc": rc, "--rc-glow": rc + "22" }}>
+                <div className="dx-left">
+                  <p className="dx-eyebrow">AI Diagnosis Complete</p>
+                  <h2 className="dx-disease">
+                    {result.emoji} {result.disease}
+                  </h2>
+                  <div className="dx-badge">
+                    {result.risk === "none" ? (
+                      <><CheckCircle size={13} /> Healthy — No Disease Found</>
+                    ) : result.risk === "high" ? (
+                      <><AlertTriangle size={13} /> High Risk — Act Immediately</>
+                    ) : result.risk === "moderate" ? (
+                      <><AlertTriangle size={13} /> Moderate — Act This Week</>
+                    ) : (
+                      <><AlertTriangle size={13} /> Low Risk — Monitor Closely</>
+                    )}
+                  </div>
+                </div>
+
+                <div className="dx-ring">
+                  <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="7" />
+                    <motion.circle
+                      cx="50" cy="50" r="42" fill="none"
+                      stroke={rc} strokeWidth="7" strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 42}`}
+                      initial={{ strokeDashoffset: `${2 * Math.PI * 42}` }}
+                      animate={{ strokeDashoffset: `${2 * Math.PI * 42 * (1 - result.confidence / 100)}` }}
+                      transition={{ duration: 1.8, ease: "easeOut" }}
+                      transform="rotate(-90 50 50)"
+                    />
+                  </svg>
+                  <div className="dx-ring-inner">
+                    <span className="dx-pct">{result.confidence}%</span>
+                    <span className="dx-pct-lbl">confidence</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Meta strip */}
+              <div className="meta-strip">
+                <img src={preview} alt="analyzed" className="meta-thumb" />
+                {[
+                  ["Disease", result.disease],
+                  ["Confidence", `${result.confidence}%`],
+                  ["Risk", result.risk === "none" ? "None" : result.risk],
+                ].map(([k, v]) => (
+                  <div key={k} className="meta-chip">
+                    <span className="meta-key">{k}</span>
+                    <span className="meta-val" style={k === "Risk" ? { color: rc, textTransform: "capitalize" } : {}}>
+                      {v}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Info Cards */}
+              <div className="info-grid">
+                {[
+                  { icon: <FlaskConical size={18} />, label: "Cause", key: "causes", color: "#ef4444" },
+                  { icon: <Eye size={18} />, label: "Symptoms", key: "symptoms", color: "#f97316" },
+                  { icon: <Shield size={18} />, label: "Prevention", key: "prevention", color: "#22c55e" },
+                  { icon: <Leaf size={18} />, label: "Treatment & Pesticide", key: "pesticide", color: "#3b82f6", extra: `💰 ${result.info.price}` },
+                ].map(({ icon, label, key, color, extra }, i) => (
+                  <motion.div
+                    key={key}
+                    className="info-card"
+                    style={{ "--accent": color }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.09, duration: 0.5 }}
+                  >
+                    <div className="info-icon" style={{ background: color + "18", color }}>
+                      {icon}
+                    </div>
+                    <p className="info-label">{label}</p>
+                    <p className="info-text">{result.info[key]}</p>
+                    {extra && <span className="info-price">{extra}</span>}
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Probabilities */}
+              {Object.keys(result.all_probabilities).length > 0 && (
+                <div className="probs-card">
+                  <p className="probs-title">All Disease Probabilities</p>
+                  {Object.entries(result.all_probabilities)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([name, pct], i) => (
+                      <div key={name} className={`prob-row ${name === result.disease ? "prob-top" : ""}`}>
+                        <span className="prob-name">{name}</span>
+                        <div className="prob-track">
+                          <motion.div
+                            className="prob-fill"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.max(Number(pct), 0.3)}%` }}
+                            transition={{ duration: 0.8, delay: i * 0.04, ease: "easeOut" }}
+                            style={{ background: name === result.disease ? rc : "rgba(255,255,255,0.1)" }}
+                          />
+                        </div>
+                        <span className="prob-val">{pct}%</span>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              <div className="result-footer">
+                <button className="btn-reset" onClick={reset}>
+                  <RotateCcw size={14} />
+                  Analyze Another Leaf
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
+
+      {/* Disease Library */}
+      <section className="library">
+        <div className="section-tag">Disease Library</div>
+        <h2 className="section-title">10 Diseases We Detect</h2>
+        <p className="section-desc">Know what you're dealing with before you upload.</p>
+        <div className="lib-grid">
           {[
-            {i:"🤖",k:"Model",   v:"MobileNetV2 Transfer Learning"},
-            {i:"🎯",k:"Accuracy",v:"89%+ Validated on Test Set"},
-            {i:"🌾",k:"Dataset", v:"PlantVillage · 16,000+ Images"},
-            {i:"🇮🇳",k:"Origin",  v:"Built in India for Farmers"},
-          ].map(({i,k,v}) => (
-            <div key={k} className="t-item">
-              <span className="t-i">{i}</span>
-              <div><div className="t-k">{k}</div><div className="t-v">{v}</div></div>
+            { e: "🦠", n: "Bacterial Spot", r: "High", c: "#ef4444", d: "Brown spots with yellow halos. Spreads via rain." },
+            { e: "🟤", n: "Early Blight", r: "Moderate", c: "#f97316", d: "Ring spots on older leaves. Alternaria fungus." },
+            { e: "🖤", n: "Late Blight", r: "High", c: "#ef4444", d: "Rapid dark patches. Destroys crop in days." },
+            { e: "🟡", n: "Leaf Mold", r: "Low", c: "#eab308", d: "Yellow above, fuzzy below. High humidity." },
+            { e: "⚪", n: "Septoria Leaf Spot", r: "Moderate", c: "#f97316", d: "White-centred spots. Water splash spreads it." },
+            { e: "🕷️", n: "Spider Mites", r: "Moderate", c: "#f97316", d: "Bronze stippling and webbing. Hot conditions." },
+            { e: "🎯", n: "Target Spot", r: "Moderate", c: "#f97316", d: "Concentric ring spots on leaves and stems." },
+            { e: "🌀", n: "Yellow Leaf Curl", r: "High", c: "#ef4444", d: "Leaves curl yellow. Whitefly spread. No cure." },
+            { e: "🧩", n: "Mosaic Virus", r: "High", c: "#ef4444", d: "Mottled mosaic pattern. Spreads by contact." },
+            { e: "🟢", n: "Healthy", r: "None", c: "#22c55e", d: "Deep green uniform leaves. No disease signs." },
+          ].map(({ e, n, r, c, d }) => (
+            <div key={n} className="lib-card">
+              <span className="lib-em">{e}</span>
+              <p className="lib-name">{n}</p>
+              <p className="lib-desc">{d}</p>
+              <span className="lib-risk" style={{ color: c, borderColor: c + "33", background: c + "11" }}>
+                {r} Risk
+              </span>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* ── FLOATING FOOTER ── */}
-      <div className="foot-outer">
-        <footer className="foot">
-          <div className="foot-wrap">
-            <div className="foot-brand">
-              <div className="logo">
-                <div className="logo-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 5 6 5 13C5 17.4 8.1 21 12 22C15.9 21 19 17.4 19 13C19 6 12 2 12 2Z"/></svg></div>
-                <span className="logo-name">KrishiDrishti</span>
-              </div>
-              <p>AI-powered disease detection for Indian farmers. Free forever.</p>
-            </div>
-            <div className="foot-links">
-              <a href="#how">How it works</a>
-              <a href="#diagnose">Diagnose</a>
-              <a href="#diseases">Diseases</a>
-            </div>
-            <div className="foot-right">
-              <p className="foot-copy">© 2026 KrishiDrishti</p>
-              <p className="foot-quote">"Strong Farmers,<br/>Strong Nation 🇮🇳"</p>
+      {/* Trust Strip */}
+      <div className="trust-strip">
+        {[
+          { icon: "🤖", k: "AI Model", v: "MobileNetV2 Transfer Learning" },
+          { icon: "🎯", k: "Accuracy", v: "89%+ Validated" },
+          { icon: "🌾", k: "Dataset", v: "PlantVillage 16,000+ Images" },
+          { icon: "🇮🇳", k: "Origin", v: "Built in India" },
+        ].map(({ icon, k, v }) => (
+          <div key={k} className="trust-item">
+            <div className="trust-icon">{icon}</div>
+            <div>
+              <p className="trust-key">{k}</p>
+              <p className="trust-val">{v}</p>
             </div>
           </div>
-        </footer>
+        ))}
       </div>
 
+      {/* Footer */}
+      <footer className="footer">
+        <div className="footer-inner">
+          <div className="footer-left">
+            <p className="footer-brand">KrishiDrishti</p>
+            <p className="footer-copy">©2026 KrishiDrishti India Pvt. Ltd · All rights reserved</p>
+          </div>
+          <p className="footer-quote">"Strong Farmers Build a Strong Nation 🇮🇳"</p>
+        </div>
+      </footer>
     </div>
   );
 }
