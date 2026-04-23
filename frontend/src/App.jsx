@@ -18,6 +18,19 @@ const TICKS = [
   "📸 Upload a clear close-up leaf photo for best AI accuracy",
 ];
 
+const DISEASES = [
+  {e:"🦠",n:"Bacterial Spot",       r:"High",    c:"#ef4444",d:"Small brown water-soaked spots surrounded by yellow halos. Caused by Xanthomonas bacteria spread through rain, tools and infected seeds."},
+  {e:"🟤",n:"Early Blight",          r:"Moderate",c:"#f97316",d:"Dark brown concentric ring spots forming a target pattern on older lower leaves. Caused by Alternaria solani fungus in warm humid conditions."},
+  {e:"🖤",n:"Late Blight",            r:"High",    c:"#ef4444",d:"Large dark greasy water-soaked patches that turn black fast. Caused by Phytophthora infestans. Can destroy entire crop within days."},
+  {e:"🟡",n:"Leaf Mold",              r:"Low",     c:"#eab308",d:"Pale yellow spots on upper leaf surface with olive green to brown fuzzy mold on the underside. Thrives in high humidity above 85%."},
+  {e:"⚪",n:"Septoria Leaf Spot",     r:"Moderate",c:"#f97316",d:"Small circular spots with white or grey centers and dark brown borders. Black specks visible inside spots. Spreads by water splash."},
+  {e:"🕷️",n:"Spider Mites",           r:"Moderate",c:"#f97316",d:"Tiny mites cause fine yellow or bronze stippling on leaves with webbing visible on the underside. Thrives in hot dry dusty conditions."},
+  {e:"🎯",n:"Target Spot",            r:"Moderate",c:"#f97316",d:"Brown circular spots with distinct concentric target ring pattern on leaves, stems and fruit. Caused by Corynespora cassiicola fungus."},
+  {e:"🌀",n:"Yellow Leaf Curl Virus", r:"High",    c:"#ef4444",d:"Leaves curl upward and turn yellow at edges. Plant growth becomes stunted. Spread by whiteflies. No cure once infected — remove plant."},
+  {e:"🧩",n:"Mosaic Virus",           r:"High",    c:"#ef4444",d:"Mottled light and dark green mosaic pattern across leaves. Leaves may curl and distort. Spreads easily by contact and infected tools."},
+  {e:"🟢",n:"Healthy",                r:"None",    c:"#22c55e",d:"Leaf shows deep uniform green color with no spots, discoloration or abnormalities. Plant is healthy. Continue regular monitoring and prevention."},
+];
+
 export default function App() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -50,7 +63,6 @@ export default function App() {
     } catch (err) {
       const d = err?.response?.data?.detail || "";
       if (d.includes("NOT_A_LEAF")) setError("Please upload a real tomato leaf photo only.");
-      else if (d.includes("LOW_CONFIDENCE")) setError("Image unclear. Use a close-up in good lighting.");
       else setError("Server is starting up. Wait 30 seconds and try again.");
     }
     setLoading(false);
@@ -64,9 +76,23 @@ export default function App() {
   const riskLabel = r => ({none:"Healthy",low:"Low Risk",moderate:"Moderate Risk",high:"High Risk"}[r]||r);
   const STEPS = ["Reading image","Running AI model","Preparing report"];
   const tips = result ? (
-    result.risk==="none" ? ["Keep monitoring your crop every 3 to 4 days","Water at the base of plants, never on leaves","Apply Neem Oil spray every 15 days as prevention","Maintain spacing for good air circulation"] :
-    result.risk==="high" ? ["Act immediately — do not delay treatment","Remove and burn all infected leaves today","Apply recommended pesticide within 24 hours","Do not compost infected material","Contact your local agriculture officer"] :
-    ["Start treatment within 2 to 3 days","Prune infected leaves with clean scissors","Apply recommended fungicide now","Monitor remaining plants daily for spread"]
+    result.risk==="none" ? [
+      "Keep monitoring your crop every 3 to 4 days",
+      "Water at the base of plants, never on leaves",
+      "Apply Neem Oil spray every 15 days as prevention",
+      "Maintain proper plant spacing for good air circulation",
+    ] : result.risk==="high" ? [
+      "Act immediately — do not delay treatment",
+      "Remove and burn all infected leaves today",
+      "Apply recommended pesticide within 24 hours",
+      "Do not compost infected plant material",
+      "Contact your local agriculture officer if spreading",
+    ] : [
+      "Start treatment within 2 to 3 days",
+      "Prune infected leaves carefully with clean scissors",
+      "Apply recommended fungicide or pesticide now",
+      "Monitor remaining plants daily for any spread",
+    ]
   ) : [];
 
   return (
@@ -175,23 +201,17 @@ export default function App() {
                 </div>
                 <div className="demo-footer">Powered by MobileNetV2</div>
               </div>
-              <div className="float-card fc1">
-                <span>⚡</span><span>2–3 sec detection</span>
-              </div>
-              <div className="float-card fc2">
-                <span>🌾</span><span>16,000+ trained images</span>
-              </div>
+              <div className="float-card fc1"><span>⚡</span><span>2–3 sec detection</span></div>
+              <div className="float-card fc2"><span>🌾</span><span>16,000+ trained images</span></div>
             </div>
           </div>
-
-          {/* Stats */}
           <div className="stats-strip">
             {[
-              {n:"89%+",l:"Accuracy",i:"🎯"},
-              {n:"10",l:"Diseases",i:"🔬"},
-              {n:"16K+",l:"Images Trained",i:"🗂️"},
-              {n:"< 3s",l:"Detection Speed",i:"⚡"},
-              {n:"Free",l:"Always Free",i:"🎁"},
+              {n:"89%+",l:"Accuracy",    i:"🎯"},
+              {n:"10",  l:"Diseases",    i:"🔬"},
+              {n:"16K+",l:"Images",      i:"🗂️"},
+              {n:"< 3s",l:"Detection",   i:"⚡"},
+              {n:"Free",l:"Always Free", i:"🎁"},
             ].map(({n,l,i}) => (
               <div key={l} className="stat-block">
                 <span className="stat-icon">{i}</span>
@@ -212,9 +232,9 @@ export default function App() {
           <h2 className="sec-title">Three steps to instant diagnosis</h2>
           <div className="how-grid">
             {[
-              {n:"01",e:"📸",t:"Upload Photo",d:"Take a clear, well-lit close-up of a single tomato leaf and upload from your phone or computer."},
-              {n:"02",e:"🤖",t:"AI Analyzes",d:"Our MobileNetV2 deep learning model checks for 10 disease patterns in just 2 to 3 seconds."},
-              {n:"03",e:"💊",t:"Get Treatment",d:"Receive pesticide name, dosage instructions and Indian market prices immediately."},
+              {n:"01",e:"📸",t:"Upload Photo",  d:"Take a clear well-lit close-up of a single tomato leaf and upload from your phone or computer."},
+              {n:"02",e:"🤖",t:"AI Analyzes",   d:"Our MobileNetV2 deep learning model checks for 10 disease patterns in just 2 to 3 seconds."},
+              {n:"03",e:"💊",t:"Get Treatment", d:"Receive pesticide name, dosage instructions and Indian market prices in Rupees immediately."},
             ].map(({n,e,t,d}) => (
               <div key={n} className="how-card">
                 <div className="how-num">{n}</div>
@@ -232,7 +252,7 @@ export default function App() {
         <div className="container">
           <p className="sec-eyebrow">Diagnosis Tool</p>
           <h2 className="sec-title">Upload your leaf photo</h2>
-          <p className="sec-sub">Works best with close-up, well-lit photos of a single tomato leaf.</p>
+          <p className="sec-sub">Works best with close-up well-lit photos of a single tomato leaf.</p>
 
           {!result ? (
             <div className="tool-box">
@@ -305,7 +325,6 @@ export default function App() {
             </div>
           ) : (
             <div className="result-wrap">
-              {/* Result Hero */}
               <div className="res-hero" style={{"--rc":RC[result.risk]}}>
                 <div className="res-main">
                   <p className="res-tag">AI DIAGNOSIS COMPLETE</p>
@@ -342,7 +361,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Info Cards */}
               <div className="info-grid">
                 {[
                   {ico:"🧬",title:"Cause",     body:result.info.causes,     color:"#ef4444"},
@@ -361,7 +379,6 @@ export default function App() {
                 ))}
               </div>
 
-              {/* Farmer Tips */}
               <div className="tips-panel">
                 <h3 className="tips-title">🌾 Farmer Action Plan — {result.disease}</h3>
                 <div className="tips-grid">
@@ -374,7 +391,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Probabilities */}
               <div className="probs-panel">
                 <h3 className="probs-title">All Disease Probabilities</h3>
                 {Object.entries(result.all_probabilities).sort((a,b)=>b[1]-a[1]).map(([name,pct],i) => (
@@ -407,18 +423,7 @@ export default function App() {
           <h2 className="sec-title">10 conditions we identify</h2>
           <p className="sec-sub">Trained on 16,000+ PlantVillage images with 89%+ accuracy.</p>
           <div className="disease-grid">
-            {[
-              {e:"🦠",n:"Bacterial Spot",      r:"High",    c:"#ef4444",d:"Brown spots with yellow halos. Xanthomonas bacteria."},
-              {e:"🟤",n:"Early Blight",         r:"Moderate",c:"#f97316",d:"Ring spots on older leaves. Alternaria fungus."},
-              {e:"🖤",n:"Late Blight",           r:"High",    c:"#ef4444",d:"Dark patches. Can destroy crop in days."},
-              {e:"🟡",n:"Leaf Mold",             r:"Low",     c:"#eab308",d:"Pale yellow spots, olive mold below."},
-              {e:"⚪",n:"Septoria Leaf Spot",    r:"Moderate",c:"#f97316",d:"White-centered spots. Rain splash spreads it."},
-              {e:"🕷️",n:"Spider Mites",          r:"Moderate",c:"#f97316",d:"Bronze stippling and webbing under leaves."},
-              {e:"🎯",n:"Target Spot",           r:"Moderate",c:"#f97316",d:"Target ring pattern on leaves and stems."},
-              {e:"🌀",n:"Yellow Leaf Curl",      r:"High",    c:"#ef4444",d:"Curling yellow leaves. Spread by whiteflies."},
-              {e:"🧩",n:"Mosaic Virus",          r:"High",    c:"#ef4444",d:"Mottled mosaic pattern. Spreads by contact."},
-              {e:"🟢",n:"Healthy",               r:"None",    c:"#22c55e",d:"Deep green, uniform. No disease detected."},
-            ].map(({e,n,r,c,d}) => (
+            {DISEASES.map(({e,n,r,c,d}) => (
               <div key={n} className="dis-card">
                 <span className="dis-e">{e}</span>
                 <h4 className="dis-n">{n}</h4>
